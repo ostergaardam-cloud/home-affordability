@@ -73,7 +73,7 @@ No build tools, no frameworks, no dependencies. Just open the HTML file.
 ### Local Development
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR-USERNAME/home-affordability.git
+git clone https://github.com/ostergaardam-cloud/home-affordability.git
 cd home-affordability
 
 # Open in browser (Windows)
@@ -86,7 +86,7 @@ open index.html
 ### Deploy to GitHub Pages
 1. Push `index.html` and `county-tax-data.js` to a public GitHub repo
 2. Go to **Settings → Pages → Source: Deploy from branch (main, / root)**
-3. Your site will be live at `https://YOUR-USERNAME.github.io/home-affordability/`
+3. Your site will be live at `https://ostergaardam-cloud.github.io/home-affordability/`
 
 ---
 
