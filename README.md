@@ -92,7 +92,7 @@ open index.html
 
 ## 🌐 Live Demo
 
-[View on GitHub Pages →](https://YOUR-USERNAME.github.io/home-affordability/)
+[View on GitHub Pages →](https://ostergaardam-cloud.github.io/home-affordability/)
 
 ---
 
