@@ -1,0 +1,2406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home Affordability Assessment</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-light: #dbeafe;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  /* Layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+  header { text-align: center; padding: 32px 0 8px; }
+  header h1 { font-size: 1.75rem; }
+  header p { color: var(--muted); margin-top: 4px; font-size: .95rem; }
+
+  /* Mode toggle */
+  .mode-toggle { display: flex; justify-content: center; margin: 20px 0 8px; }
+  .mode-toggle button { padding: 10px 28px; font-size: .9rem; font-weight: 600; cursor: pointer; border: 2px solid var(--border); background: var(--card); color: var(--muted); transition: .2s; }
+  .mode-toggle button:first-child { border-radius: 8px 0 0 8px; border-right: 1px solid var(--border); }
+  .mode-toggle button:last-child { border-radius: 0 8px 8px 0; border-left: 1px solid var(--border); }
+  .mode-toggle button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .mode-hint { text-align: center; color: var(--muted); font-size: .8rem; margin-bottom: 16px; }
+
+  /* Simple mode */
+  .simple-mode { display: none; }
+  .simple-mode.active { display: block; }
+  .detailed-mode { display: block; }
+  .detailed-mode.hidden { display: none; }
+  .assumptions-note { background: var(--primary-light); border-radius: 8px; padding: 14px 18px; margin-top: 16px; font-size: .82rem; color: var(--primary); }
+  .assumptions-note strong { display: block; margin-bottom: 4px; font-size: .85rem; }
+
+  /* Steps nav */
+  .steps { display: flex; justify-content: center; gap: 4px; margin: 28px 0 24px; flex-wrap: wrap; }
+  .steps button { background: var(--card); border: 2px solid var(--border); border-radius: 999px; padding: 8px 20px; font-size: .85rem; cursor: pointer; font-weight: 600; color: var(--muted); transition: .2s; }
+  .steps button.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+  .steps button.done { border-color: var(--success); color: var(--success); }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 32px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+  .card h2 { font-size: 1.15rem; margin-bottom: 4px; }
+  .card .subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 20px; }
+
+  /* Form grid */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+  @media(max-width:600px){ .form-grid { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: .82rem; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  input, select { padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: .95rem; outline: none; transition: .15s; width: 100%; }
+  input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+
+  /* Expense repeater */
+  .expense-row { display: flex; gap: 10px; align-items: end; margin-bottom: 10px; }
+  .expense-row input { flex: 1; }
+  .expense-row .remove-btn { background: none; border: none; color: var(--danger); font-size: 1.3rem; cursor: pointer; padding: 6px; line-height: 1; }
+  .add-btn { background: var(--primary-light); color: var(--primary); border: 1.5px dashed var(--primary); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: .85rem; font-weight: 600; margin-top: 4px; }
+
+  /* Toggle switch for income period */
+  .toggle-group { display: inline-flex; border: 2px solid var(--border); border-radius: 8px; overflow: hidden; margin-top: 4px; }
+  .toggle-group input[type="radio"] { display: none; }
+  .toggle-group label.toggle-opt { padding: 10px 24px; font-size: .9rem; font-weight: 600; cursor: pointer; color: var(--muted); background: var(--card); border: none; transition: .2s; user-select: none; }
+  .toggle-group input[type="radio"]:checked + label.toggle-opt { background: var(--primary); color: #fff; }
+
+  /* Navigation buttons */
+  .nav-buttons { display: flex; justify-content: space-between; margin-top: 8px; }
+  .btn { padding: 12px 28px; border: none; border-radius: 8px; font-size: .95rem; font-weight: 600; cursor: pointer; transition: .15s; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-outline { background: none; border: 2px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Results */
+  .result-hero { text-align: center; padding: 28px 0 12px; }
+  .result-hero .verdict { font-size: 1.6rem; font-weight: 700; }
+  .result-hero .verdict.green { color: var(--success); }
+  .result-hero .verdict.yellow { color: var(--warning); }
+  .result-hero .verdict.red { color: var(--danger); }
+  .result-hero .tagline { color: var(--muted); margin-top: 4px; }
+
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 16px; margin: 24px 0; }
+  .metric-card { background: var(--bg); border-radius: 10px; padding: 18px; text-align: center; }
+  .metric-card .val { font-size: 1.35rem; font-weight: 700; }
+  .metric-card .lbl { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+
+  .bar-wrap { background: #e5e7eb; border-radius: 999px; height: 18px; overflow: hidden; margin: 6px 0 2px; }
+  .bar-fill { height: 100%; border-radius: 999px; transition: width .6s ease; }
+
+  .breakdown { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .breakdown th, .breakdown td { text-align: left; padding: 10px 12px; font-size: .88rem; }
+  .breakdown th { background: var(--bg); font-weight: 600; }
+  .breakdown tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
+  .breakdown .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .tips { margin-top: 16px; }
+  .tips li { margin-bottom: 6px; font-size: .9rem; }
+
+  .print-btn { margin-top: 16px; }
+
+  /* Readiness Score Ring */
+  .score-section { text-align: center; padding: 24px 0 16px; }
+  .score-ring { position: relative; width: 170px; height: 170px; margin: 0 auto 12px; }
+  .score-ring svg { transform: rotate(-90deg); overflow: visible; }
+  .score-ring .bg { fill: none; stroke: #e5e7eb; stroke-width: 10; }
+  .score-ring .fg { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1s ease, stroke .3s; }
+  .score-number { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 2.4rem; font-weight: 800; line-height: 1; }
+  .score-number small { display: block; font-size: .65rem; font-weight: 600; color: var(--muted); letter-spacing: .5px; margin-top: 2px; }
+  .score-label { font-size: 1.05rem; font-weight: 700; margin-top: 4px; }
+  .score-label.green { color: var(--success); }
+  .score-label.yellow { color: var(--warning); }
+  .score-label.red { color: var(--danger); }
+  .score-factors { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 10px; margin-top: 16px; text-align: left; }
+  .score-factor { background: var(--bg); border-radius: 8px; padding: 12px 14px; font-size: .82rem; }
+  .score-factor .sf-label { color: var(--muted); margin-bottom: 2px; }
+  .score-factor .sf-bar { background: #e5e7eb; border-radius: 999px; height: 6px; margin-top: 6px; overflow: hidden; }
+  .score-factor .sf-fill { height: 100%; border-radius: 999px; transition: width .6s; }
+  .score-factor .sf-val { font-weight: 700; font-size: .95rem; }
+  .info-tip { position: relative; cursor: help; font-size: .75rem; opacity: .55; margin-left: 3px; }
+  .info-tip-text { display: none; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1f2937; color: #fff; font-size: .78rem; font-weight: 400; padding: 8px 12px; border-radius: 8px; width: max-content; max-width: 260px; white-space: normal; line-height: 1.4; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+  .info-tip:hover .info-tip-text, .info-tip:focus .info-tip-text { display: block; }
+
+  /* Expense sections */
+  .exp-section { margin-bottom: 24px; }
+  .exp-section h3 { font-size: .95rem; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+  .exp-desc { font-size: .8rem; color: var(--muted); margin-bottom: 12px; }
+  .section-divider { border: none; border-top: 1.5px solid var(--border); margin: 20px 0; }
+  .tax-estimator-box { background: var(--bg); border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; }
+  .tax-estimator-box h4 { font-size: .88rem; margin-bottom: 10px; color: var(--primary); }
+  .tax-output { background: var(--primary-light); border-radius: 8px; padding: 12px 16px; margin-top: 14px; font-size: .88rem; }
+  .tax-output .highlight { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+  .input-mode-switch { display: inline-flex; border: 1.5px solid var(--border); border-radius: 6px; overflow: hidden; margin-left: 8px; font-size: .78rem; }
+  .input-mode-switch button { padding: 4px 12px; border: none; background: var(--card); cursor: pointer; font-size: .78rem; font-weight: 600; color: var(--muted); transition: .15s; }
+  .input-mode-switch button.active { background: var(--primary); color: #fff; }
+  .field-hint { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+
+  /* What Would Have to Be True - Sliders */
+  .wwhbt-section { margin-top: 28px; }
+  .wwhbt-section h3 { margin-bottom: 4px; }
+  .wwhbt-subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 18px; }
+  .slider-group { margin-bottom: 18px; }
+  .slider-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .slider-label .sl-name { font-size: .85rem; font-weight: 600; }
+  .slider-label .sl-val { font-size: .95rem; font-weight: 700; color: var(--primary); }
+  .slider-label .sl-delta { font-size: .78rem; margin-left: 6px; }
+  .sl-delta.positive { color: var(--success); }
+  .sl-delta.negative { color: var(--danger); }
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 999px; background: #e5e7eb; outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+  input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: var(--primary); cursor: pointer; border: none; }
+  .wwhbt-live-score { text-align: center; padding: 16px; background: var(--bg); border-radius: 10px; margin-bottom: 20px; }
+  .wwhbt-live-score .live-num { font-size: 2rem; font-weight: 800; }
+  .wwhbt-live-score .live-label { font-size: .82rem; color: var(--muted); }
+  .wwhbt-live-score .live-verdict { font-size: .95rem; font-weight: 700; margin-top: 4px; }
+  .slider-reset { background: none; border: 1.5px solid var(--border); border-radius: 6px; padding: 4px 12px; font-size: .78rem; cursor: pointer; color: var(--muted); margin-left: 8px; }
+  .slider-reset:hover { border-color: var(--primary); color: var(--primary); }
+  .sl-auto-btn { background: var(--primary-light); color: var(--primary); border: 1.5px solid var(--primary); border-radius: 6px; padding: 2px 10px; font-size: .72rem; font-weight: 600; cursor: pointer; margin-left: 6px; transition: .15s; white-space: nowrap; vertical-align: middle; }
+  .sl-auto-btn:hover { background: var(--primary); color: #fff; }
+  .optimize-btn { background: linear-gradient(135deg, var(--primary), #7c3aed); color: #fff; border: none; border-radius: 8px; padding: 10px 24px; font-size: .9rem; font-weight: 700; cursor: pointer; transition: .2s; display: inline-flex; align-items: center; gap: 6px; }
+  .optimize-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,.3); }
+  .optimize-hint { font-size: .78rem; color: var(--muted); margin-top: 6px; }
+
+  /* Timeline Planner */
+  .planner-section { margin-top: 28px; border-top: 1.5px solid var(--border); padding-top: 24px; }
+  .planner-section h3 { margin-bottom: 4px; }
+  .planner-output { background: var(--bg); border-radius: 10px; padding: 18px; margin-top: 14px; }
+  .planner-output .timeline-date { font-size: 1.3rem; font-weight: 800; color: var(--primary); }
+  .planner-output .timeline-detail { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+  .milestone-bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .milestone-bar .ms-track { flex: 1; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .milestone-bar .ms-fill { height: 100%; border-radius: 999px; background: var(--primary); transition: width .4s; }
+  .milestone-bar .ms-label { font-size: .78rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+
+  /* Collapsible accordion sections */
+  details.accordion { border: 1.5px solid var(--border); border-radius: 10px; margin: 16px 0; overflow: hidden; }
+  details.accordion > summary { padding: 14px 18px; font-size: .95rem; font-weight: 700; cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; background: var(--bg); user-select: none; transition: background .15s; }
+  details.accordion > summary:hover { background: var(--primary-light); }
+  details.accordion > summary::-webkit-details-marker { display: none; }
+  details.accordion > summary::after { content: '▸'; font-size: 1rem; transition: transform .2s; color: var(--muted); }
+  details.accordion[open] > summary::after { transform: rotate(90deg); }
+  details.accordion > summary .acc-hint { font-size: .78rem; font-weight: 400; color: var(--muted); margin-left: auto; margin-right: 10px; }
+  details.accordion > .acc-body { padding: 18px 20px; }
+
+  /* Compact metric strip (replaces big metric-card grid for top-level) */
+  .metric-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+  .metric-strip .ms-item { background: var(--bg); border-radius: 8px; padding: 12px 10px; text-align: center; }
+  .metric-strip .ms-item .val { font-size: 1.15rem; font-weight: 700; }
+  .metric-strip .ms-item .lbl { font-size: .72rem; color: var(--muted); margin-top: 1px; line-height: 1.3; }
+  @media(max-width:600px){ .metric-strip { grid-template-columns: 1fr 1fr; } }
+
+  @media print {
+    .steps, .nav-buttons, .print-btn, .btn { display: none !important; }
+    .panel { display: block !important; }
+    .panel:not(#results) { display: none !important; }
+    #results { display: block !important; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🏠 Home Affordability Assessment</h1>
+    <p>Enter your financial details to see if your dream home is within reach.</p>
+  </header>
+
+  <!-- Mode Toggle -->
+  <div class="mode-toggle">
+    <button class="active" onclick="switchMode('simple')">⚡ Quick Check</button>
+    <button onclick="switchMode('detailed')">📋 Detailed Analysis</button>
+  </div>
+  <div class="mode-hint" id="modeHint">Get a fast estimate with just a few inputs</div>
+
+  <!-- ====== SIMPLE MODE ====== -->
+  <div class="simple-mode active" id="simpleMode">
+    <div class="card">
+      <h2>Quick Affordability Check</h2>
+      <p class="subtitle">Answer 4-5 questions and we'll estimate the rest using standard rules of thumb.</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Gross Annual Household Income ($)</label>
+          <input type="number" id="sqIncome" placeholder="85000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Total Monthly Debt Payments ($)</label>
+          <input type="number" id="sqDebt" placeholder="500" min="0">
+          <small style="color:var(--muted)">Car loans, student loans, credit cards, etc.</small>
+        </div>
+        <div class="form-group">
+          <label>Home Price You're Considering ($)</label>
+          <input type="number" id="sqPrice" placeholder="350000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Down Payment</label>
+          <select id="sqDown">
+            <option value="0.05">5% — Minimum conventional</option>
+            <option value="0.10">10%</option>
+            <option value="0.15">15%</option>
+            <option value="0.20" selected>20% — No PMI</option>
+            <option value="custom">Custom amount…</option>
+          </select>
+        </div>
+        <div class="form-group" id="sqDownCustomWrap" style="display:none;">
+          <label>Custom Down Payment ($)</label>
+          <input type="number" id="sqDownCustom" placeholder="70000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Mortgage Interest Rate (%)</label>
+          <input type="number" id="sqRate" placeholder="6.5" min="0" max="15" step="0.125" value="6.5">
+          <small style="color:var(--muted)">30-yr fixed avg — <a href="https://www.freddiemac.com/pmms" target="_blank" style="color:var(--primary);">check current rates</a></small>
+        </div>
+        <div class="form-group">
+          <label>State</label>
+          <select id="sqState" onchange="sqStateChange()">
+            <option value="">— Optional: improve accuracy —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>County</label>
+          <select id="sqCounty">
+            <option value="">— Select state first —</option>
+          </select>
+        </div>
+      </div>
+      <div class="assumptions-note">
+        <strong>📐 Assumptions we'll use:</strong>
+        Living expenses estimated at 50% of gross income · Property tax &amp; insurance based on state/county if selected, otherwise 1.1% &amp; 0.35% of home price · 30-year fixed mortgage · PMI at 0.5% if under 20% down
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <span></span>
+      <button class="btn btn-primary" onclick="simpleCalculate()">Calculate Affordability 🏡</button>
+    </div>
+  </div>
+
+  <!-- ====== DETAILED MODE ====== -->
+  <div class="detailed-mode hidden" id="detailedMode">
+
+  <!-- Step Nav -->
+  <div class="steps">
+    <button class="active" onclick="goTo(0)">① Income</button>
+    <button onclick="goTo(1)">② Expenses</button>
+    <button onclick="goTo(2)">③ Debt</button>
+    <button onclick="goTo(3)">④ Home Details</button>
+    <button onclick="goTo(4)">⑤ Results</button>
+  </div>
+
+  <!-- STEP 0 – Income -->
+  <div class="panel active" id="p0">
+    <div class="card">
+      <h2>Income</h2>
+      <p class="subtitle">Enter all sources of gross (pre-tax) income. Choose whether you're entering annual or monthly figures.</p>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>I'm entering income as:</label>
+          <div class="toggle-group">
+            <input type="radio" name="incPeriod" id="incMonthly" value="monthly" checked>
+            <label class="toggle-opt" for="incMonthly">Monthly</label>
+            <input type="radio" name="incPeriod" id="incAnnual" value="annual">
+            <label class="toggle-opt" for="incAnnual">Annual</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Primary Salary / Wages</label>
+          <input type="number" id="incSalary" placeholder="$0" min="0">
+        </div>
+        <div class="form-group">
+          <label>Spouse / Partner Income</label>
+          <input type="number" id="incSpouse" placeholder="$0" min="0">
+        </div>
+        <div class="form-group">
+          <label>Side Hustle / Freelance</label>
+          <input type="number" id="incSide" placeholder="$0" min="0">
+        </div>
+        <div class="form-group">
+          <label>Other Income (rental, dividends…)</label>
+          <input type="number" id="incOther" placeholder="$0" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <span></span>
+      <button class="btn btn-primary" onclick="goTo(1)">Next → Expenses</button>
+    </div>
+  </div>
+
+  <!-- STEP 1 – Expenses & Deductions -->
+  <div class="panel" id="p1">
+    <div class="card">
+      <h2>Monthly Expenses &amp; Deductions</h2>
+      <p class="subtitle">We'll walk through taxes, savings, and living costs to build an accurate budget picture.</p>
+
+      <!-- === TAXES === -->
+      <details class="accordion" open>
+        <summary>🏛️ Income Taxes <span class="acc-hint" id="taxAccHint"></span></summary>
+        <div class="acc-body">
+        <p class="exp-desc">Your combined federal + state income tax each month.</p>
+        <div style="margin-bottom:12px;">
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-right:18px;">
+            <input type="radio" name="taxMode" value="known" checked onchange="toggleTaxMode()"> I know my monthly tax amount
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="radio" name="taxMode" value="estimate" onchange="toggleTaxMode()"> Estimate it for me
+          </label>
+        </div>
+
+        <!-- Known tax input -->
+        <div id="taxKnownPanel">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Monthly Income Tax (Fed + State)
+                <span class="input-mode-switch">
+                  <button class="active" onclick="setTaxKnownMode('dollar',this)">$</button>
+                  <button onclick="setTaxKnownMode('pct',this)">%</button>
+                </span>
+              </label>
+              <input type="number" id="taxMonthlyKnown" placeholder="$0" min="0" step="any">
+              <span class="field-hint" id="taxKnownHint">Monthly dollar amount</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tax estimator -->
+        <div id="taxEstPanel" style="display:none;">
+          <div class="tax-estimator-box">
+            <h4>📊 Tax Estimator</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Tax Year</label>
+                <select id="taxYear" onchange="estimateTax()">
+                  <option value="2025">2025</option>
+                  <option value="2026" selected>2026</option>
+                </select>
+                <span class="field-hint">Brackets &amp; limits update annually</span>
+              </div>
+              <div class="form-group">
+                <label>Filing Status</label>
+                <select id="taxFilingStatus" onchange="estimateTax()">
+                  <option value="single">Single</option>
+                  <option value="married" selected>Married Filing Jointly</option>
+                  <option value="hoh">Head of Household</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>State of Residence</label>
+                <select id="taxState" onchange="estimateTax()">
+                  <option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option>
+                  <option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option>
+                  <option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="FL">Florida</option>
+                  <option value="GA">Georgia</option><option value="HI">Hawaii</option><option value="ID">Idaho</option>
+                  <option value="IL">Illinois</option><option value="IN">Indiana</option><option value="IA">Iowa</option>
+                  <option value="KS">Kansas</option><option value="KY">Kentucky</option><option value="LA">Louisiana</option>
+                  <option value="ME">Maine</option><option value="MD">Maryland</option><option value="MA">Massachusetts</option>
+                  <option value="MI" selected>Michigan</option><option value="MN">Minnesota</option><option value="MS">Mississippi</option>
+                  <option value="MO">Missouri</option><option value="MT">Montana</option><option value="NE">Nebraska</option>
+                  <option value="NV">Nevada</option><option value="NH">New Hampshire</option><option value="NJ">New Jersey</option>
+                  <option value="NM">New Mexico</option><option value="NY">New York</option><option value="NC">North Carolina</option>
+                  <option value="ND">North Dakota</option><option value="OH">Ohio</option><option value="OK">Oklahoma</option>
+                  <option value="OR">Oregon</option><option value="PA">Pennsylvania</option><option value="RI">Rhode Island</option>
+                  <option value="SC">South Carolina</option><option value="SD">South Dakota</option><option value="TN">Tennessee</option>
+                  <option value="TX">Texas</option><option value="UT">Utah</option><option value="VT">Vermont</option>
+                  <option value="VA">Virginia</option><option value="WA">Washington</option><option value="WV">West Virginia</option>
+                  <option value="WI">Wisconsin</option><option value="WY">Wyoming</option><option value="DC">Washington D.C.</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Children Under 17</label>
+                <input type="number" id="taxKids" placeholder="0" min="0" max="10" value="0" onchange="estimateTax()">
+                <span class="field-hint">$2,000 child tax credit each</span>
+              </div>
+            </div>
+
+            <!-- Deduction Method -->
+            <div style="margin-top:16px;margin-bottom:12px;">
+              <label style="font-size:.88rem;font-weight:700;display:block;margin-bottom:8px;">Deduction Method</label>
+              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-right:18px;">
+                <input type="radio" name="deductionMethod" value="standard" checked onchange="toggleDeductionMethod()"> Standard Deduction
+              </label>
+              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="radio" name="deductionMethod" value="itemized" onchange="toggleDeductionMethod()"> Itemized Deductions
+              </label>
+            </div>
+
+            <!-- Standard deduction panel -->
+            <div id="stdDeductionPanel" class="tax-estimator-box" style="margin-top:8px;">
+              <div style="font-size:.85rem;color:var(--muted);margin-bottom:10px;">
+                The standard deduction is a flat amount the IRS lets you subtract from your income — most people use this.
+                Your estimated standard deduction: <strong id="stdDeductionDisplay">$0</strong>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Above-the-Line Deductions ($)</label>
+                  <input type="number" id="taxAboveLineDeductions" placeholder="0" min="0" onchange="estimateTax()">
+                  <span class="field-hint">Student loan interest, educator expenses, traditional IRA — these apply on top of the standard deduction</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Itemized deduction panel -->
+            <div id="itemizedPanel" style="display:none;margin-top:8px;" class="tax-estimator-box">
+              <div style="font-size:.85rem;color:var(--muted);margin-bottom:10px;">
+                Itemizing makes sense if your total deductions exceed the standard deduction (<strong id="stdDeductionCompare">$0</strong>).
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Mortgage Interest ($)</label>
+                  <input type="number" id="itemMortgageInt" placeholder="0" min="0" onchange="estimateTax()">
+                  <span class="field-hint">Annual interest paid on your mortgage</span>
+                </div>
+                <div class="form-group">
+                  <label>State &amp; Local Taxes — SALT ($)</label>
+                  <input type="number" id="itemSALT" placeholder="0" min="0" onchange="estimateTax()">
+                  <span class="field-hint">Property tax + state income tax (capped at $10,000)</span>
+                </div>
+                <div class="form-group">
+                  <label>Charitable Contributions ($)</label>
+                  <input type="number" id="itemCharity" placeholder="0" min="0" onchange="estimateTax()">
+                </div>
+                <div class="form-group">
+                  <label>Medical Expenses Above 7.5% of AGI ($)</label>
+                  <input type="number" id="itemMedical" placeholder="0" min="0" onchange="estimateTax()">
+                  <span class="field-hint">Only the amount exceeding 7.5% of your AGI</span>
+                </div>
+                <div class="form-group">
+                  <label>Other Itemized Deductions ($)</label>
+                  <input type="number" id="itemOther" placeholder="0" min="0" onchange="estimateTax()">
+                  <span class="field-hint">Casualty losses, etc.</span>
+                </div>
+                <div class="form-group">
+                  <label>Above-the-Line Deductions ($)</label>
+                  <input type="number" id="taxAboveLineItemized" placeholder="0" min="0" onchange="estimateTax()">
+                  <span class="field-hint">Student loan interest, educator expenses — these still apply when itemizing</span>
+                </div>
+              </div>
+              <div id="itemizedTotal" style="margin-top:10px;font-size:.9rem;font-weight:600;"></div>
+            </div>
+            <div class="tax-output" id="taxEstOutput">
+              <em>Fill in details above — your income from Step 1 will be used automatically.</em>
+            </div>
+          </div>
+        </div>
+      </div>
+      </details>
+
+      <!-- === RETIREMENT, HSA & SAVINGS === -->
+      <details class="accordion" open>
+        <summary>💰 Retirement, HSA &amp; Savings <span class="acc-hint" id="retAccHint"></span></summary>
+        <div class="acc-body">
+        <p class="exp-desc">Pre-tax contributions reduce your taxable income. Post-tax (Roth) comes out of take-home pay. Include ongoing savings so your cash flow cushion score reflects true discretionary income.</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Pre-Tax Retirement (401k, 403b, etc.)
+              <span class="input-mode-switch">
+                <button class="active" onclick="setRetMode('dollar',this)">$</button>
+                <button onclick="setRetMode('pct',this)">%</button>
+              </span>
+            </label>
+            <input type="number" id="retPreTax" placeholder="$0 or %" min="0" step="any">
+            <span class="field-hint" id="retPreTaxHint">Monthly dollar amount</span>
+          </div>
+          <div class="form-group">
+            <label>Post-Tax Retirement (Roth 401k/IRA)
+              <span class="input-mode-switch">
+                <button class="active" onclick="setRothMode('dollar',this)">$</button>
+                <button onclick="setRothMode('pct',this)">%</button>
+              </span>
+            </label>
+            <input type="number" id="retPostTax" placeholder="$0" min="0" step="any">
+            <span class="field-hint" id="retPostTaxHint">Monthly dollar amount</span>
+          </div>
+          <div class="form-group">
+            <label>HSA Contribution (Pre-Tax)</label>
+            <input type="number" id="hsaAmount" placeholder="$0" min="0">
+            <span class="field-hint">Monthly dollar amount</span>
+          </div>
+          <div class="form-group">
+            <label>Other Monthly Savings</label>
+            <input type="number" id="monthlySavingsGoal" placeholder="$0" min="0">
+            <span class="field-hint">College funds, emergency fund, brokerage, etc.</span>
+          </div>
+        </div>
+      </div>
+      </div></details>
+
+      <!-- === LIVING EXPENSES === -->
+      <details class="accordion" open>
+        <summary>🛒 Living Expenses <span class="acc-hint" id="expAccHint"></span></summary>
+        <div class="acc-body">
+        <p class="exp-desc">Your regular monthly spending. Edit names/amounts or add/remove rows to match your budget.</p>
+        <div id="expList"></div>
+        <button class="add-btn" onclick="addExpense()">+ Add Expense</button>
+        </div>
+      </details>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="goTo(0)">← Back</button>
+      <button class="btn btn-primary" onclick="goTo(2)">Next → Debt</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 – Debt -->
+  <div class="panel" id="p2">
+    <div class="card">
+      <h2>Monthly Debt Payments</h2>
+      <p class="subtitle">Include all minimum monthly debt obligations (car loans, student loans, credit cards, etc.).</p>
+      <div id="debtList"></div>
+      <button class="add-btn" onclick="addDebt()">+ Add Debt</button>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="goTo(1)">← Back</button>
+      <button class="btn btn-primary" onclick="goTo(3)">Next → Home Details</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 – Home Details -->
+  <div class="panel" id="p3">
+    <div class="card">
+      <h2>Home &amp; Mortgage Details</h2>
+      <p class="subtitle">Enter the specifics of the home you're considering.</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Home Purchase Price ($)</label>
+          <input type="number" id="homePrice" placeholder="350000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Down Payment ($)</label>
+          <input type="number" id="downPayment" placeholder="70000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Mortgage Interest Rate (%)</label>
+          <input type="number" id="mortRate" placeholder="6.5" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Mortgage Term (years)</label>
+          <select id="mortTerm">
+            <option value="30">30 years</option>
+            <option value="20">20 years</option>
+            <option value="15">15 years</option>
+            <option value="10">10 years</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>State (for tax &amp; insurance estimate)</label>
+          <select id="homeState" onchange="onStateChange()">
+            <option value="">— Select state —</option>
+          </select>
+          <span class="field-hint" id="homeStateHint"></span>
+        </div>
+        <div class="form-group">
+          <label>County</label>
+          <select id="homeCounty" onchange="suggestTaxIns()">
+            <option value="">— Select state first —</option>
+          </select>
+          <span class="field-hint" id="homeCountyHint"></span>
+        </div>
+        <div class="form-group">
+          <label>Annual Property Taxes ($)</label>
+          <input type="number" id="propTax" placeholder="4200" min="0">
+          <span class="field-hint" id="propTaxHint"></span>
+        </div>
+        <div class="form-group">
+          <label>Annual Home Insurance ($)</label>
+          <input type="number" id="homeIns" placeholder="1500" min="0">
+          <span class="field-hint" id="homeInsHint"></span>
+        </div>
+        <div class="form-group">
+          <label>Monthly HOA / Condo Fees ($)</label>
+          <input type="number" id="hoa" placeholder="0" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="goTo(2)">← Back</button>
+      <button class="btn btn-primary" onclick="calculate()">Calculate Affordability 🏡</button>
+    </div>
+  </div>
+
+  </div><!-- /detailedMode -->
+
+  <!-- STEP 4 – Results (shared by both modes) -->
+  <div class="panel" id="results">
+    <div class="card" id="resultsCard"></div>
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="backToInputs()">← Edit Inputs</button>
+      <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+    </div>
+  </div>
+</div>
+
+<script src="county-tax-data.js"></script>
+<script>
+// --- helpers ---
+const $ = id => document.getElementById(id);
+const num = id => parseFloat($(id).value) || 0;
+const fmt = n => n.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:0, maximumFractionDigits:0});
+const pct = n => (n * 100).toFixed(1) + '%';
+
+// --- mode switching ---
+let currentMode = 'simple';
+function switchMode(mode) {
+  currentMode = mode;
+  const btns = document.querySelectorAll('.mode-toggle button');
+  btns.forEach(b => b.classList.remove('active'));
+  btns[mode === 'simple' ? 0 : 1].classList.add('active');
+  $('simpleMode').classList.toggle('active', mode === 'simple');
+  $('detailedMode').classList.toggle('hidden', mode === 'simple');
+  $('modeHint').textContent = mode === 'simple'
+    ? 'Get a fast estimate with just a few inputs'
+    : 'Enter your full financial picture for a precise assessment';
+  // Hide results when switching modes
+  $('results').classList.remove('active');
+  saveAll();
+}
+
+function backToInputs() {
+  $('results').classList.remove('active');
+  if (currentMode === 'simple') {
+    $('simpleMode').classList.add('active');
+  } else {
+    goTo(3);
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// Simple mode: custom down payment toggle
+$('sqDown').addEventListener('change', function() {
+  $('sqDownCustomWrap').style.display = this.value === 'custom' ? '' : 'none';
+});
+
+// --- State property tax & insurance data ---
+// Effective property tax rate (%) and avg annual home insurance ($) by state
+// --- State & County property tax and insurance data ---
+// Insurance: rate as % of home value by state (Sources: III, NAIC 2024)
+// County tax: effective property tax rate by county (Sources: Census ACS B25103/B25077, Tax Foundation)
+const STATE_INS_RATE = {
+  AL:0.0058,AK:0.0040,AZ:0.0037,AR:0.0065,CA:0.0030,CO:0.0045,CT:0.0038,DE:0.0028,
+  FL:0.0110,GA:0.0044,HI:0.0025,ID:0.0033,IL:0.0037,IN:0.0035,IA:0.0038,KS:0.0065,
+  KY:0.0052,LA:0.0100,ME:0.0032,MD:0.0033,MA:0.0034,MI:0.0038,MN:0.0038,MS:0.0080,
+  MO:0.0048,MT:0.0042,NE:0.0055,NV:0.0032,NH:0.0030,NJ:0.0028,NM:0.0042,NY:0.0035,
+  NC:0.0042,ND:0.0048,OH:0.0032,OK:0.0082,OR:0.0028,PA:0.0032,RI:0.0047,SC:0.0052,
+  SD:0.0052,TN:0.0050,TX:0.0080,UT:0.0027,VT:0.0027,VA:0.0032,WA:0.0030,WV:0.0042,
+  WI:0.0028,WY:0.0035,DC:0.0030
+};
+const STATE_NAMES = {
+  AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',
+  CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',
+  IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',
+  ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',
+  MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',
+  NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',
+  OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',
+  SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',
+  WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming',DC:'District of Columbia'
+};
+
+// Populate state dropdowns (detailed + quick check)
+(function populateHomeState() {
+  const sorted = Object.keys(STATE_NAMES).sort((a,b) => STATE_NAMES[a].localeCompare(STATE_NAMES[b]));
+  ['homeState', 'sqState'].forEach(id => {
+    const sel = $(id);
+    if (!sel) return;
+    sorted.forEach(abbr => {
+      const opt = document.createElement('option');
+      opt.value = abbr;
+      opt.textContent = STATE_NAMES[abbr];
+      sel.appendChild(opt);
+    });
+  });
+})();
+
+// When state changes, populate county dropdown and update hints
+function onStateChange() {
+  const abbr = $('homeState')?.value;
+  const countySel = $('homeCounty');
+  countySel.innerHTML = '<option value="">— Select county —</option>';
+
+  if (abbr && COUNTY_TAX[abbr]) {
+    COUNTY_TAX[abbr].forEach(([name, rate]) => {
+      const opt = document.createElement('option');
+      opt.value = rate;
+      opt.textContent = name + ' (' + (rate * 100).toFixed(2) + '%)';
+      countySel.appendChild(opt);
+    });
+  }
+
+  const hint = $('homeStateHint');
+  if (hint) {
+    if (abbr && STATE_INS_RATE[abbr]) {
+      hint.textContent = 'Avg home insurance rate: ' + (STATE_INS_RATE[abbr] * 100).toFixed(2) + '% of home value';
+    } else {
+      hint.textContent = '';
+    }
+  }
+
+  suggestTaxIns();
+}
+
+/* Simple-mode state/county change handler */
+function sqStateChange() {
+  const abbr = $('sqState')?.value;
+  const countySel = $('sqCounty');
+  countySel.innerHTML = '<option value="">— Select county —</option>';
+  if (abbr && COUNTY_TAX[abbr]) {
+    COUNTY_TAX[abbr].forEach(([name, rate]) => {
+      const opt = document.createElement('option');
+      opt.value = rate;
+      opt.textContent = name + ' (' + (rate * 100).toFixed(2) + '%)';
+      countySel.appendChild(opt);
+    });
+  }
+}
+
+function suggestTaxIns() {
+  const abbr = $('homeState')?.value;
+  const price = num('homePrice');
+  const taxHint = $('propTaxHint');
+  const insHint = $('homeInsHint');
+  const countyHint = $('homeCountyHint');
+
+  // Clear hints if no state
+  if (!abbr) {
+    if (taxHint) taxHint.textContent = '';
+    if (insHint) insHint.textContent = '';
+    if (countyHint) countyHint.textContent = '';
+    return;
+  }
+
+  // County tax suggestion
+  const countyRate = parseFloat($('homeCounty')?.value);
+  if (countyRate > 0 && price > 0) {
+    const estTax = Math.round(price * countyRate);
+    if (countyHint) countyHint.textContent = '';
+    if (taxHint) taxHint.innerHTML = 'County rate suggests <strong>' + fmt(estTax) + '/yr</strong> · <a href="#" onclick="$(\'propTax\').value=' + estTax + ';$(\'propTax\').dispatchEvent(new Event(\'input\',{bubbles:true}));return false;" style="color:var(--primary);font-weight:600;">Use estimate</a>';
+  } else if (countyRate > 0) {
+    if (taxHint) taxHint.textContent = 'Enter a home price to see estimated tax';
+    if (countyHint) countyHint.textContent = 'Effective rate: ' + (countyRate * 100).toFixed(2) + '%';
+  } else {
+    if (taxHint) taxHint.textContent = price > 0 ? 'Select a county for a tax estimate' : '';
+    if (countyHint) countyHint.textContent = '';
+  }
+
+  // Insurance suggestion (% of home value)
+  const insRate = STATE_INS_RATE[abbr];
+  if (insRate && price > 0) {
+    const estIns = Math.round(price * insRate);
+    if (insHint) insHint.innerHTML = 'State avg suggests <strong>' + fmt(estIns) + '/yr</strong> (' + (insRate * 100).toFixed(2) + '% of value) · <a href="#" onclick="$(\'homeIns\').value=' + estIns + ';$(\'homeIns\').dispatchEvent(new Event(\'input\',{bubbles:true}));return false;" style="color:var(--primary);font-weight:600;">Use estimate</a>';
+  } else {
+    if (insHint) insHint.textContent = price > 0 ? '' : 'Enter a home price to see estimated insurance';
+  }
+}
+
+// Re-run suggestion when home price changes
+$('homePrice').addEventListener('input', () => { if ($('homeState').value) suggestTaxIns(); });
+
+// --- step navigation (detailed mode) ---
+const panels = document.querySelectorAll('.panel');
+const stepBtns = document.querySelectorAll('.steps button');
+let cur = 0;
+function goTo(i) {
+  if (i === 4) { calculate(); return; }
+  panels.forEach(p => p.classList.remove('active'));
+  stepBtns.forEach((b,idx) => { b.classList.remove('active'); if(idx < i) b.classList.add('done'); else b.classList.remove('done'); });
+  panels[i].classList.add('active');
+  stepBtns[i].classList.add('active');
+  cur = i;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// --- dynamic expense rows ---
+let expId = 0;
+function addExpense(name='', amount='') {
+  const id = expId++;
+  const div = document.createElement('div');
+  div.className = 'expense-row';
+  div.id = 'exp'+id;
+  div.innerHTML = `<input type="text" placeholder="e.g. Groceries" value="${name}"><input type="number" placeholder="$0" min="0" value="${amount}"><button class="remove-btn" onclick="document.getElementById('exp${id}').remove()">✕</button>`;
+  $('expList').appendChild(div);
+}
+// seed defaults
+['Groceries','Transportation (Gas, Insurance, Maintenance, Lease)','Utilities','Savings','Subscriptions / Memberships','Other'].forEach(n => addExpense(n));
+
+let debtId = 0;
+function addDebt(name='', amount='') {
+  const id = debtId++;
+  const div = document.createElement('div');
+  div.className = 'expense-row';
+  div.id = 'debt'+id;
+  div.innerHTML = `<input type="text" placeholder="e.g. Car Loan" value="${name}"><input type="number" placeholder="$0" min="0" value="${amount}"><button class="remove-btn" onclick="document.getElementById('debt${id}').remove()">✕</button>`;
+  $('debtList').appendChild(div);
+}
+['Car Loan','Student Loan','Credit Card Min'].forEach(n => addDebt(n));
+
+// --- Retirement input mode ($ vs %) ---
+let retMode = 'dollar';
+let rothMode = 'dollar';
+let taxKnownMode = 'dollar';
+function setRetMode(mode, btn) {
+  retMode = mode;
+  const btns = btn.parentElement.querySelectorAll('button');
+  btns.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  $('retPreTaxHint').textContent = mode === 'dollar' ? 'Monthly dollar amount' : 'Percentage of gross income';
+  $('retPreTax').placeholder = mode === 'dollar' ? '$0' : 'e.g. 6';
+  saveAll();
+}
+function setRothMode(mode, btn) {
+  rothMode = mode;
+  const btns = btn.parentElement.querySelectorAll('button');
+  btns.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  $('retPostTaxHint').textContent = mode === 'dollar' ? 'Monthly dollar amount' : 'Percentage of gross income';
+  $('retPostTax').placeholder = mode === 'dollar' ? '$0' : 'e.g. 6';
+  saveAll();
+}
+function setTaxKnownMode(mode, btn) {
+  taxKnownMode = mode;
+  const btns = btn.parentElement.querySelectorAll('button');
+  btns.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  $('taxKnownHint').textContent = mode === 'dollar' ? 'Monthly dollar amount' : 'Effective tax rate (% of gross income)';
+  $('taxMonthlyKnown').placeholder = mode === 'dollar' ? '$0' : 'e.g. 25';
+  saveAll();
+}
+
+// --- Tax mode toggle ---
+function toggleTaxMode() {
+  const mode = document.querySelector('input[name="taxMode"]:checked').value;
+  $('taxKnownPanel').style.display = mode === 'known' ? '' : 'none';
+  $('taxEstPanel').style.display = mode === 'estimate' ? '' : 'none';
+  if (mode === 'estimate') estimateTax();
+  saveAll();
+}
+
+function toggleDeductionMethod() {
+  const method = document.querySelector('input[name="deductionMethod"]:checked').value;
+  $('stdDeductionPanel').style.display = method === 'standard' ? '' : 'none';
+  $('itemizedPanel').style.display = method === 'itemized' ? '' : 'none';
+  estimateTax();
+  saveAll();
+}
+
+function getDeductionAmount(status) {
+  const tc = getTaxConfig();
+  const method = document.querySelector('input[name="deductionMethod"]:checked').value;
+  const stdDed = tc.stdDeduction[status] || tc.stdDeduction.single;
+
+  if (method === 'standard') {
+    const aboveLine = num('taxAboveLineDeductions');
+    return { deduction: stdDed, aboveLine };
+  } else {
+    // Itemized
+    const mortInt = num('itemMortgageInt');
+    const salt = Math.min(num('itemSALT'), 10000); // SALT cap
+    const charity = num('itemCharity');
+    const medical = num('itemMedical');
+    const other = num('itemOther');
+    const aboveLine = num('taxAboveLineItemized');
+    const totalItemized = mortInt + salt + charity + medical + other;
+
+    // Show comparison
+    if ($('itemizedTotal')) {
+      const better = totalItemized > stdDed;
+      $('itemizedTotal').innerHTML = `Your itemized total: <strong>${fmt(totalItemized)}</strong> vs. standard deduction: <strong>${fmt(stdDed)}</strong> — ${better ? '<span style="color:var(--success)">✅ Itemizing saves you more</span>' : '<span style="color:var(--warning)">⚠️ Standard deduction is higher — consider switching</span>'}`;
+    }
+
+    return { deduction: totalItemized, aboveLine };
+  }
+}
+
+// --- Tax Estimator ---
+// Centralized tax config — update annually or add new year block
+const TAX_DATA = {
+  2025: {
+    fedBrackets: {
+      single:  [[11600,0.10],[47150,0.12],[100525,0.22],[191950,0.24],[243725,0.32],[609350,0.35],[Infinity,0.37]],
+      married: [[23200,0.10],[94300,0.12],[201050,0.22],[383900,0.24],[487450,0.32],[731200,0.35],[Infinity,0.37]],
+      hoh:     [[16550,0.10],[63100,0.12],[100500,0.22],[191950,0.24],[243700,0.32],[609350,0.35],[Infinity,0.37]]
+    },
+    stdDeduction: { single: 15000, married: 30000, hoh: 22500 },
+    childTaxCredit: 2000,
+    childAgeLimit: 17,
+    ssWageCap: 168600,
+    ssRate: 0.062,
+    medicareRate: 0.0145,
+    stateRates: {
+      AL:0.04,AK:0,AZ:0.025,AR:0.039,CA:0.065,CO:0.044,CT:0.05,DE:0.055,FL:0,GA:0.0549,
+      HI:0.065,ID:0.058,IL:0.0495,IN:0.0305,IA:0.044,KS:0.046,KY:0.04,LA:0.0185,ME:0.055,
+      MD:0.0475,MA:0.05,MI:0.0425,MN:0.0585,MS:0.047,MO:0.048,MT:0.059,NE:0.0501,NV:0,
+      NH:0,NJ:0.055,NM:0.039,NY:0.06,NC:0.045,ND:0.018,OH:0.035,OK:0.0475,OR:0.08,
+      PA:0.0307,RI:0.0475,SC:0.064,SD:0,TN:0,TX:0,UT:0.0465,VT:0.055,VA:0.0575,
+      WA:0,WV:0.05,WI:0.053,WY:0,DC:0.065
+    }
+  },
+  2026: {
+    fedBrackets: {
+      single:  [[11925,0.10],[48475,0.12],[103350,0.22],[197300,0.24],[250525,0.32],[626350,0.35],[Infinity,0.37]],
+      married: [[23850,0.10],[96950,0.12],[206700,0.22],[394600,0.24],[501050,0.32],[751600,0.35],[Infinity,0.37]],
+      hoh:     [[17000,0.10],[64850,0.12],[103350,0.22],[197300,0.24],[250500,0.32],[626350,0.35],[Infinity,0.37]]
+    },
+    stdDeduction: { single: 15400, married: 30800, hoh: 23100 },
+    childTaxCredit: 2000,
+    childAgeLimit: 17,
+    ssWageCap: 174900,
+    ssRate: 0.062,
+    medicareRate: 0.0145,
+    stateRates: {
+      AL:0.04,AK:0,AZ:0.025,AR:0.039,CA:0.065,CO:0.044,CT:0.05,DE:0.055,FL:0,GA:0.0549,
+      HI:0.065,ID:0.058,IL:0.0495,IN:0.0305,IA:0.044,KS:0.046,KY:0.04,LA:0.0185,ME:0.055,
+      MD:0.0475,MA:0.05,MI:0.0425,MN:0.0585,MS:0.047,MO:0.048,MT:0.059,NE:0.0501,NV:0,
+      NH:0,NJ:0.055,NM:0.039,NY:0.06,NC:0.045,ND:0.018,OH:0.035,OK:0.0475,OR:0.08,
+      PA:0.0307,RI:0.0475,SC:0.064,SD:0,TN:0,TX:0,UT:0.0465,VT:0.055,VA:0.0575,
+      WA:0,WV:0.05,WI:0.053,WY:0,DC:0.065
+    }
+  }
+};
+
+function getTaxYear() {
+  const sel = $('taxYear');
+  return sel ? parseInt(sel.value) : 2026;
+}
+
+function getTaxConfig() {
+  const year = getTaxYear();
+  return TAX_DATA[year] || TAX_DATA[2026];
+}
+
+function getAnnualGrossIncome() {
+  let gross = num('incSalary') + num('incSpouse') + num('incSide') + num('incOther');
+  if (document.querySelector('input[name="incPeriod"]:checked').value === 'monthly') gross *= 12;
+  return gross;
+}
+
+function getMonthlyPreTaxRetirement() {
+  const val = num('retPreTax');
+  if (retMode === 'pct') {
+    return (getAnnualGrossIncome() / 12) * (val / 100);
+  }
+  return val;
+}
+
+function getMonthlyPostTaxRetirement() {
+  const val = num('retPostTax');
+  if (rothMode === 'pct') {
+    return (getAnnualGrossIncome() / 12) * (val / 100);
+  }
+  return val;
+}
+
+function calcFederalTax(taxableIncome, status) {
+  const tc = getTaxConfig();
+  const brackets = tc.fedBrackets[status] || tc.fedBrackets.single;
+  let tax = 0, prev = 0;
+  for (const [limit, rate] of brackets) {
+    if (taxableIncome <= prev) break;
+    const chunk = Math.min(taxableIncome, limit) - prev;
+    tax += chunk * rate;
+    prev = limit;
+  }
+  return Math.max(tax, 0);
+}
+
+function estimateTax() {
+  const annualGross = getAnnualGrossIncome();
+  if (annualGross <= 0) {
+    $('taxEstOutput').innerHTML = '<em>Enter your income in Step 1 first, then come back here.</em>';
+    return;
+  }
+
+  const tc = getTaxConfig();
+  const status = $('taxFilingStatus').value;
+  const state = $('taxState').value;
+  const kids = parseInt($('taxKids').value) || 0;
+  const preTaxRet = getMonthlyPreTaxRetirement() * 12;
+  const hsaAnnual = num('hsaAmount') * 12;
+
+  // Adjusted gross income
+  const agi = annualGross - preTaxRet - hsaAnnual;
+
+  // Show standard deduction amount in UI
+  const stdDed = tc.stdDeduction[status] || tc.stdDeduction.single;
+  if ($('stdDeductionDisplay')) $('stdDeductionDisplay').textContent = fmt(stdDed);
+  if ($('stdDeductionCompare')) $('stdDeductionCompare').textContent = fmt(stdDed);
+
+  // Deduction (standard or itemized) + above-the-line
+  const { deduction, aboveLine } = getDeductionAmount(status);
+  const taxableIncome = Math.max(agi - aboveLine - deduction, 0);
+
+  // Federal tax
+  let fedTax = calcFederalTax(taxableIncome, status);
+
+  // Child tax credit
+  const childCredit = Math.min(kids * tc.childTaxCredit, fedTax);
+  fedTax -= childCredit;
+
+  // State tax (simplified flat effective rate on AGI)
+  const stateRate = tc.stateRates[state] || 0;
+  const stateTax = agi * stateRate;
+
+  // FICA
+  const ssTax = Math.min(annualGross, tc.ssWageCap) * tc.ssRate;
+  const medTax = annualGross * tc.medicareRate;
+  const fica = ssTax + medTax;
+
+  const totalAnnualTax = fedTax + stateTax + fica;
+  const monthlyTax = totalAnnualTax / 12;
+  const effectiveRate = annualGross > 0 ? totalAnnualTax / annualGross : 0;
+
+  $('taxEstOutput').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">
+      <div>Federal Tax: <strong>${fmt(fedTax/12)}/mo</strong></div>
+      <div>State Tax (${state}): <strong>${fmt(stateTax/12)}/mo</strong></div>
+      <div>FICA (SS + Medicare): <strong>${fmt(fica/12)}/mo</strong></div>
+      <div>Child Tax Credit: <strong>−${fmt(childCredit/12)}/mo</strong></div>
+    </div>
+    <div style="margin-top:10px;font-size:1rem;">
+      Estimated Monthly Tax: <span class="highlight">${fmt(monthlyTax)}</span>
+      <span style="color:var(--muted);font-size:.82rem;margin-left:8px;">Effective rate: ${pct(effectiveRate)}</span>
+    </div>
+    <div style="margin-top:4px;font-size:.78rem;color:var(--muted);">
+      Includes pre-tax deductions: ${fmt(preTaxRet)} retirement + ${fmt(hsaAnnual)} HSA annually
+    </div>
+  `;
+}
+
+// Re-estimate tax when income or retirement/HSA fields change
+['incSalary','incSpouse','incSide','incOther','retPreTax','hsaAmount'].forEach(id => {
+  $(id).addEventListener('input', () => {
+    if (document.querySelector('input[name="taxMode"]:checked').value === 'estimate') estimateTax();
+  });
+});
+
+// --- Get monthly tax for calculations ---
+function getMonthlyTax() {
+  const mode = document.querySelector('input[name="taxMode"]:checked').value;
+  if (mode === 'known') {
+    const val = num('taxMonthlyKnown');
+    if (taxKnownMode === 'pct') {
+      return (getAnnualGrossIncome() / 12) * (val / 100);
+    }
+    return val;
+  }
+  const tc = getTaxConfig();
+  const annualGross = getAnnualGrossIncome();
+  if (annualGross <= 0) return 0;
+  const status = $('taxFilingStatus').value;
+  const state = $('taxState').value;
+  const kids = parseInt($('taxKids').value) || 0;
+  const preTaxRet = getMonthlyPreTaxRetirement() * 12;
+  const hsaAnnual = num('hsaAmount') * 12;
+  const agi = annualGross - preTaxRet - hsaAnnual;
+  const { deduction, aboveLine } = getDeductionAmount(status);
+  const taxableIncome = Math.max(agi - aboveLine - deduction, 0);
+  let fedTax = calcFederalTax(taxableIncome, status);
+  fedTax -= Math.min(kids * tc.childTaxCredit, fedTax);
+  const stateTax = agi * (tc.stateRates[state] || 0);
+  const ssTax = Math.min(annualGross, tc.ssWageCap) * tc.ssRate;
+  const medTax = annualGross * tc.medicareRate;
+  return (fedTax + stateTax + ssTax + medTax) / 12;
+}
+
+// --- calculation ---
+function calculate() {
+  // Income
+  let grossIncome = num('incSalary') + num('incSpouse') + num('incSide') + num('incOther');
+  if (document.querySelector('input[name="incPeriod"]:checked').value === 'annual') grossIncome = grossIncome / 12;
+  if (grossIncome <= 0) { alert('Please enter at least one income source.'); goTo(0); return; }
+
+  // Taxes, Retirement, HSA, Savings
+  const monthlyTax = getMonthlyTax();
+  const retPreTaxMo = getMonthlyPreTaxRetirement();
+  const retPostTaxMo = getMonthlyPostTaxRetirement();
+  const hsaMo = num('hsaAmount');
+  const savingsGoalMo = num('monthlySavingsGoal');
+
+  // Expenses (living expenses from the list)
+  let totalLivingExp = 0;
+  document.querySelectorAll('#expList .expense-row').forEach(r => { totalLivingExp += parseFloat(r.querySelectorAll('input')[1].value) || 0; });
+
+  // Total non-housing expenses = taxes + retirement + HSA + savings + living expenses
+  const totalExp = monthlyTax + retPreTaxMo + retPostTaxMo + hsaMo + savingsGoalMo + totalLivingExp;
+
+  // Debt
+  let totalDebt = 0;
+  document.querySelectorAll('#debtList .expense-row').forEach(r => { totalDebt += parseFloat(r.querySelectorAll('input')[1].value) || 0; });
+
+  // Home
+  const price = num('homePrice');
+  const down = num('downPayment');
+  const rate = num('mortRate') / 100;
+  const years = parseInt($('mortTerm').value);
+  const tax = num('propTax') / 12;
+  const ins = num('homeIns') / 12;
+  const hoa = num('hoa');
+
+  if (price <= 0) { alert('Please enter a home price.'); goTo(3); return; }
+
+  const loan = price - down;
+  const r = rate / 12;
+  const n = years * 12;
+  const mortPmt = r > 0 ? loan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : loan / n;
+
+  // PMI estimate if <20% down
+  const pmi = (down / price < 0.2) ? loan * 0.005 / 12 : 0;
+
+  const totalHousing = mortPmt + tax + ins + hoa + pmi;
+  const totalInterest = (mortPmt * n) - loan;
+
+  // Ratios
+  const frontEnd = totalHousing / grossIncome;   // housing-to-income (ideal ≤ 28%)
+  const backEnd = (totalHousing + totalDebt) / grossIncome; // DTI (ideal ≤ 36%)
+  const residual = grossIncome - totalExp - totalDebt - totalHousing;
+
+  // Verdict
+  let verdict, verdictClass, tagline;
+  if (frontEnd <= 0.28 && backEnd <= 0.36 && residual > 0) {
+    verdict = '✅ Looks Affordable!';
+    verdictClass = 'green';
+    tagline = 'Your ratios are within recommended guidelines. You appear well-positioned for this home.';
+  } else if (frontEnd <= 0.33 && backEnd <= 0.43 && residual > 0) {
+    verdict = '⚠️ Stretching It';
+    verdictClass = 'yellow';
+    tagline = 'You may qualify, but your budget will be tight. Consider reducing the price or increasing your down payment.';
+  } else {
+    verdict = '🚫 Not Recommended';
+    verdictClass = 'red';
+    tagline = 'This home exceeds recommended affordability thresholds. See tips below for next steps.';
+  }
+
+  // --- Readiness Score (0-100) ---
+  // Factor 1: Front-end ratio (max 30 pts) — ideal ≤ 28%, worst ≥ 50%
+  const fePts = frontEnd <= 0.28 ? 30 : frontEnd >= 0.50 ? 0 : Math.round(30 * (0.50 - frontEnd) / 0.22);
+  // Factor 2: Back-end ratio (max 30 pts) — ideal ≤ 36%, worst ≥ 55%
+  const bePts = backEnd <= 0.36 ? 30 : backEnd >= 0.55 ? 0 : Math.round(30 * (0.55 - backEnd) / 0.19);
+  // Factor 3: Down payment (max 20 pts) — 20%+ = full, 0% = 0
+  const dpPct = price > 0 ? down / price : 0;
+  const dpPts = dpPct >= 0.20 ? 20 : Math.round(20 * dpPct / 0.20);
+  // Factor 4: Residual cash flow as % of income (max 20 pts) — 15%+ ideal, <0 = 0
+  const residualPct = grossIncome > 0 ? residual / grossIncome : 0;
+  const cfPts = residualPct >= 0.15 ? 20 : residualPct <= 0 ? 0 : Math.round(20 * residualPct / 0.15);
+
+  const readinessScore = fePts + bePts + dpPts + cfPts;
+  const scoreColor = readinessScore >= 75 ? 'var(--success)' : readinessScore >= 50 ? 'var(--warning)' : 'var(--danger)';
+  const scoreClass = readinessScore >= 75 ? 'green' : readinessScore >= 50 ? 'yellow' : 'red';
+  const scoreWord = readinessScore >= 85 ? 'Excellent' : readinessScore >= 75 ? 'Strong' : readinessScore >= 60 ? 'Fair' : readinessScore >= 40 ? 'Needs Work' : 'Not Ready';
+
+  // SVG ring math
+  const circumference = 2 * Math.PI * 66; // radius 66
+  const dashOffset = circumference - (readinessScore / 100) * circumference;
+
+  function factorBar(label, pts, max, detail, tooltip) {
+    const pctW = Math.round(pts / max * 100);
+    const c = pctW >= 80 ? 'var(--success)' : pctW >= 50 ? 'var(--warning)' : 'var(--danger)';
+    const icon = tooltip ? ' <span class="info-tip" tabindex="0">ⓘ<span class="info-tip-text">' + tooltip + '</span></span>' : '';
+    return `<div class="score-factor"><div class="sf-label">${label}${icon}</div><div class="sf-val">${pts}/${max} <span style="font-weight:400;color:var(--muted);font-size:.78rem;">${detail}</span></div><div class="sf-bar"><div class="sf-fill" style="width:${pctW}%;background:${c}"></div></div></div>`;
+  }
+
+  // Build results
+  const html = `
+    <div class="score-section">
+      <div class="score-ring">
+        <svg width="170" height="170" viewBox="-10 -10 160 160">
+          <circle class="bg" cx="70" cy="70" r="66"/>
+          <circle class="fg" cx="70" cy="70" r="66" stroke="${scoreColor}" stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}"/>
+        </svg>
+        <div class="score-number" style="color:${scoreColor}">${readinessScore}<small>/ 100</small></div>
+      </div>
+      <div class="score-label ${scoreClass}">Home Readiness: ${scoreWord}</div>
+      <div class="score-factors">
+        ${factorBar('Housing-to-Income', fePts, 30, pct(frontEnd))}
+        ${factorBar('Debt-to-Income', bePts, 30, pct(backEnd))}
+        ${factorBar('Down Payment', dpPts, 20, pct(dpPct))}
+        ${factorBar('Cash Flow Cushion', cfPts, 20, pct(residualPct), "What's left after all expenses, savings, debt & housing. Make sure your savings goals (college, emergency fund, etc.) are entered so this score is accurate.")}
+      </div>
+    </div>
+
+    <div class="result-hero">
+      <div class="verdict ${verdictClass}">${verdict}</div>
+      <div class="tagline">${tagline}</div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric-card"><div class="val">${fmt(totalHousing)}</div><div class="lbl">Est. Monthly Housing Cost</div></div>
+      <div class="metric-card"><div class="val">${fmt(mortPmt)}</div><div class="lbl">Principal &amp; Interest</div></div>
+      <div class="metric-card"><div class="val">${fmt(residual)}</div><div class="lbl">${residual >= 0 ? 'Monthly Cash Left Over' : 'Monthly Shortfall'}</div></div>
+      <div class="metric-card"><div class="val">${pct(frontEnd)}</div><div class="lbl">Housing-to-Income (≤28% ideal)</div></div>
+      <div class="metric-card"><div class="val">${pct(backEnd)}</div><div class="lbl">Debt-to-Income (≤36% ideal)</div></div>
+      <div class="metric-card"><div class="val">${fmt(down)} (${((down/price)*100).toFixed(1)}%)</div><div class="lbl">Down Payment</div></div>
+    </div>
+
+    <h3 style="margin-bottom:4px;">Housing-to-Income Ratio</h3>
+    <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(frontEnd*100/0.50*100,100)}%; background:${frontEnd<=0.28?'var(--success)':frontEnd<=0.33?'var(--warning)':'var(--danger)'}; width:${Math.min(frontEnd/0.50*100,100)}%"></div></div>
+    <small style="color:var(--muted)">Your ${pct(frontEnd)} vs. 28% guideline</small>
+
+    <h3 style="margin:18px 0 4px;">Debt-to-Income Ratio</h3>
+    <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(backEnd/0.50*100,100)}%; background:${backEnd<=0.36?'var(--success)':backEnd<=0.43?'var(--warning)':'var(--danger)'}"></div></div>
+    <small style="color:var(--muted)">Your ${pct(backEnd)} vs. 36% guideline</small>
+
+    <details class="accordion">
+    <summary>📊 Monthly Budget Breakdown</summary>
+    <div class="acc-body">
+    <table class="breakdown">
+      <tr><th>Item</th><th class="num">Amount</th></tr>
+      <tr><td>Gross Monthly Income</td><td class="num">${fmt(grossIncome)}</td></tr>
+      <tr><td>− Income Taxes</td><td class="num">${fmt(monthlyTax)}</td></tr>
+      <tr><td>− Pre-Tax Retirement</td><td class="num">${fmt(retPreTaxMo)}</td></tr>
+      ${retPostTaxMo ? `<tr><td>− Post-Tax Retirement (Roth)</td><td class="num">${fmt(retPostTaxMo)}</td></tr>` : ''}
+      ${hsaMo ? `<tr><td>− HSA Contribution</td><td class="num">${fmt(hsaMo)}</td></tr>` : ''}
+      ${savingsGoalMo ? `<tr><td>− Other Savings</td><td class="num">${fmt(savingsGoalMo)}</td></tr>` : ''}
+      <tr><td>− Living Expenses</td><td class="num">${fmt(totalLivingExp)}</td></tr>
+      <tr><td>− Existing Debt Payments</td><td class="num">${fmt(totalDebt)}</td></tr>
+      <tr><td>− Mortgage (P&amp;I)</td><td class="num">${fmt(mortPmt)}</td></tr>
+      <tr><td>− Property Tax</td><td class="num">${fmt(tax)}</td></tr>
+      <tr><td>− Home Insurance</td><td class="num">${fmt(ins)}</td></tr>
+      ${hoa ? `<tr><td>− HOA Fees</td><td class="num">${fmt(hoa)}</td></tr>` : ''}
+      ${pmi ? `<tr><td>− Est. PMI</td><td class="num">${fmt(pmi)}</td></tr>` : ''}
+      <tr style="font-weight:700;${residual<0?'color:var(--danger)':''}"><td>= Remaining Cash Flow</td><td class="num">${fmt(residual)}</td></tr>
+    </table>
+    </div></details>
+
+    <details class="accordion">
+    <summary>🏦 Loan Summary</summary>
+    <div class="acc-body">
+    <table class="breakdown">
+      <tr><td>Home Price</td><td class="num">${fmt(price)}</td></tr>
+      <tr><td>Loan Amount</td><td class="num">${fmt(loan)}</td></tr>
+      <tr><td>Total Interest Paid (${years} yr)</td><td class="num">${fmt(totalInterest)}</td></tr>
+      <tr><td>Total Cost of Home</td><td class="num">${fmt(price + totalInterest)}</td></tr>
+    </table>
+    </div></details>
+
+    ${(() => {
+      // --- What Can I Afford? ---
+      const taxRate = price > 0 ? (tax * 12) / price : 0.011;
+      const insRate = price > 0 ? (ins * 12) / price : 0.0035;
+      const fixedDown = down; // keep down payment as fixed dollar amount
+
+      function testAffordPrice(p) {
+        const d = Math.min(fixedDown, p); // can't put down more than the price
+        const ln = p - d;
+        const mp = r > 0 ? ln * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : ln / n;
+        const pm = (p > 0 && d / p < 0.2) ? ln * 0.005 / 12 : 0;
+        const th = mp + (p * taxRate / 12) + (p * insRate / 12) + hoa + pm;
+        const fe = th / grossIncome;
+        const be = (th + totalDebt) / grossIncome;
+        const res = grossIncome - totalExp - totalDebt - th;
+        return fe <= 0.28 && be <= 0.36 && res > 0;
+      }
+
+      let lo = 0, hi = price * 5;
+      for (let i = 0; i < 60; i++) {
+        const mid = (lo + hi) / 2;
+        if (hi - lo < 500) break;
+        if (testAffordPrice(mid)) lo = mid; else hi = mid;
+      }
+      const maxPrice = Math.floor(lo / 1000) * 1000;
+
+      const diff = maxPrice - price;
+      const diffAbs = Math.abs(diff);
+      let affordMsg, affordColor, affordIcon;
+      if (diff >= 0) {
+        affordColor = 'var(--success)';
+        affordIcon = '🏡';
+        affordMsg = diff < 5000
+          ? 'Your target home is right at your max — good match!'
+          : 'You could afford up to <strong>' + fmt(diffAbs) + ' more</strong> than your target price.';
+      } else {
+        affordColor = diffAbs < price * 0.10 ? 'var(--warning)' : 'var(--danger)';
+        affordIcon = diffAbs < price * 0.10 ? '⚠️' : '🚫';
+        affordMsg = 'Your target is <strong>' + fmt(diffAbs) + ' above</strong> what\'s recommended. Consider a home closer to your max.';
+      }
+
+      const maxDown = Math.min(fixedDown, maxPrice);
+      const maxDpPct = maxPrice > 0 ? maxDown / maxPrice : 0;
+      const maxLoan = maxPrice - maxDown;
+      const maxMort = r > 0 ? maxLoan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : (n > 0 ? maxLoan / n : 0);
+      const maxPmi = (maxPrice > 0 && maxDown / maxPrice < 0.2) ? maxLoan * 0.005 / 12 : 0;
+      const maxHousing = maxMort + (maxPrice * taxRate / 12) + (maxPrice * insRate / 12) + hoa + maxPmi;
+
+      return '<div style="background:' + (diff >= 0 ? '#f0fdf4' : diff > -price*0.10 ? '#fffbeb' : '#fef2f2') + ';border-radius:10px;padding:20px 24px;margin:24px 0 8px;">'
+        + '<h3 style="margin:0 0 8px;">' + affordIcon + ' What Can I Afford?</h3>'
+        + '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'
+        + '<span style="font-size:1.6rem;font-weight:800;color:' + affordColor + ';">' + fmt(maxPrice) + '</span>'
+        + '<span style="font-size:.88rem;color:var(--muted);">max recommended home price</span>'
+        + '</div>'
+        + '<p style="margin:8px 0 0;font-size:.88rem;color:var(--text);">' + affordMsg + '</p>'
+        + '<table class="breakdown" style="margin-top:12px;">'
+        + '<tr><td>Your Target</td><td class="num">' + fmt(price) + '</td></tr>'
+        + '<tr><td>Max Recommended</td><td class="num" style="color:' + affordColor + ';font-weight:700;">' + fmt(maxPrice) + '</td></tr>'
+        + '<tr><td>Difference</td><td class="num">' + (diff >= 0 ? '+' : '−') + fmt(diffAbs) + '</td></tr>'
+        + '<tr><td>Down Payment (' + (maxDpPct*100).toFixed(1) + '%)</td><td class="num">' + fmt(Math.round(maxDown)) + '</td></tr>'
+        + '<tr><td>Est. Monthly Housing</td><td class="num">' + fmt(Math.round(maxHousing)) + '</td></tr>'
+        + '</table>'
+        + '<p style="margin:8px 0 0;font-size:.75rem;color:var(--muted);">Assumes your ' + fmt(fixedDown) + ' down payment, ' + (rate*100).toFixed(2) + '% rate, ' + years + '-yr term. Tax &amp; insurance scaled proportionally.</p>'
+        + '</div>';
+    })()}
+
+    ${verdictClass !== 'green' ? `
+    <h3 style="margin:24px 0 4px;">💡 Tips to Improve Affordability</h3>
+    <ul class="tips">
+      <li><strong>Increase your down payment</strong> — reduces the loan and may eliminate PMI.</li>
+      <li><strong>Look at lower-priced homes</strong> — even a 5-10% drop in price helps significantly.</li>
+      <li><strong>Pay down existing debt first</strong> — this directly lowers your DTI ratio.</li>
+      <li><strong>Boost income</strong> — a side income stream improves all ratios.</li>
+      <li><strong>Consider a longer mortgage term</strong> — 30 years vs 15 lowers the monthly payment (but more interest over time).</li>
+      <li><strong>Shop for a better rate</strong> — even 0.25% lower saves thousands over the life of the loan.</li>
+    </ul>` : `
+    <h3 style="margin:24px 0 4px;">💡 Smart Next Steps</h3>
+    <ul class="tips">
+      <li><strong>Get pre-approved</strong> — a lender pre-approval letter strengthens your offer.</li>
+      <li><strong>Build an emergency fund</strong> — aim for 3-6 months of the new housing cost.</li>
+      <li><strong>Budget for closing costs</strong> — typically 2-5% of the home price.</li>
+      <li><strong>Don't forget maintenance</strong> — budget ~1% of home value per year for upkeep.</li>
+    </ul>`}
+
+    <!-- What Would Have to Be True -->
+    <details class="accordion" open>
+    <summary>🎯 What Would Have to Be True?</summary>
+    <div class="acc-body">
+    <div class="wwhbt-section">
+      <p class="wwhbt-subtitle">Drag the sliders to explore what changes would make this home affordable. Your readiness score updates in real time.</p>
+
+      <div class="wwhbt-live-score">
+        <div class="live-verdict" id="wwhbtVerdict" style="color:${scoreColor};font-size:1.15rem;">${readinessScore >= 75 ? '✅' : readinessScore >= 50 ? '⚠️' : '🚫'} ${readinessScore >= 75 ? 'Recommended to Purchase' : readinessScore >= 50 ? 'Stretching It — Proceed with Caution' : 'Not Recommended to Purchase'}</div>
+        <div style="margin:10px 0 6px;">
+          <span class="live-num" id="wwhbtScore" style="color:${scoreColor}">${readinessScore}</span>
+          <span class="live-label" style="margin-left:6px;">Readiness Score</span>
+        </div>
+        <div class="live-label" id="wwhbtRatios" style="font-size:.82rem;line-height:1.8;"></div>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="sl-name">Monthly Gross Income <button class="sl-auto-btn" onclick="autoSolve('income')">⎆ Find Target</button></span>
+          <span><span class="sl-val" id="slIncVal">${fmt(grossIncome)}</span><span class="sl-delta" id="slIncDelta"></span></span>
+        </div>
+        <input type="range" id="slIncome" min="${Math.round(grossIncome*0.3)}" max="${Math.round(grossIncome*3)}" value="${Math.round(grossIncome)}" step="100" oninput="updateWWHBT()">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="sl-name">Down Payment <button class="sl-auto-btn" onclick="autoSolve('down')">⎆ Find Target</button></span>
+          <span><span class="sl-val" id="slDownVal">${fmt(down)}</span><span class="sl-delta" id="slDownDelta"></span></span>
+        </div>
+        <input type="range" id="slDown" min="0" max="${Math.round(Math.max(down * 2, price * 0.50, 50000))}" value="${Math.round(down)}" step="1000" oninput="updateWWHBT()">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="sl-name">Monthly Living Expenses <button class="sl-auto-btn" onclick="autoSolve('expenses')">⎆ Find Target</button></span>
+          <span><span class="sl-val" id="slExpVal">${fmt(totalLivingExp)}</span><span class="sl-delta" id="slExpDelta"></span></span>
+        </div>
+        <input type="range" id="slExp" min="0" max="${Math.round(Math.max(totalLivingExp * 3, 5000))}" value="${Math.round(totalLivingExp)}" step="50" oninput="updateWWHBT()">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="sl-name">Monthly Debt Payments <button class="sl-auto-btn" onclick="autoSolve('debt')">⎆ Find Target</button></span>
+          <span><span class="sl-val" id="slDebtVal">${fmt(totalDebt)}</span><span class="sl-delta" id="slDebtDelta"></span></span>
+        </div>
+        <input type="range" id="slDebt" min="0" max="${Math.round(Math.max(totalDebt * 3, 3000))}" value="${Math.round(totalDebt)}" step="25" oninput="updateWWHBT()">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="sl-name">Mortgage Rate <button class="sl-auto-btn" onclick="autoSolve('rate')">⎆ Find Target</button></span>
+          <span><span class="sl-val" id="slRateVal">${(rate*100).toFixed(2)}%</span><span class="sl-delta" id="slRateDelta"></span></span>
+        </div>
+        <input type="range" id="slRate" min="2" max="10" value="${(rate*100).toFixed(2)}" step="0.125" oninput="updateWWHBT()">
+      </div>
+
+      <div style="text-align:right;margin-top:4px;display:flex;justify-content:flex-end;gap:8px;">
+        <button class="optimize-btn" onclick="optimizeAll()">✨ Optimize All</button>
+        <button class="slider-reset" onclick="resetWWHBT()">↺ Reset to Actual Values</button>
+      </div>
+      <div class="optimize-hint" id="optimizeHint"></div>
+    </div>
+    </div></details>
+
+    <!-- When Will I Be Ready Planner -->
+    <details class="accordion" open>
+    <summary>📅 When Will I Be Ready?</summary>
+    <div class="acc-body">
+    <div class="planner-section">
+      <p class="wwhbt-subtitle">Simulate how savings, income growth, expense changes, and home appreciation interact over time.</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Monthly Savings Toward Down Payment ($)</label>
+          <input type="number" id="planSavings" placeholder="500" min="0" value="500" oninput="updatePlanner()">
+        </div>
+        <div class="form-group">
+          <label>Current Savings for Home Purchase ($)</label>
+          <input type="number" id="planCurrentSavings" placeholder="0" min="0" value="${Math.round(down)}" oninput="updatePlanner()">
+        </div>
+        <div class="form-group">
+          <label>Expected Annual Return on Savings (%)</label>
+          <input type="number" id="planGrowthSavings" placeholder="4" min="0" max="15" step="0.5" value="4" oninput="updatePlanner()">
+          <span class="field-hint">HYSA ~4–5%, index fund ~7–10%, mattress = 0%</span>
+        </div>
+        <div class="form-group">
+          <label>Expected Annual Income Growth (%)</label>
+          <input type="number" id="planGrowth" placeholder="3" min="0" max="20" step="0.5" value="3" oninput="updatePlanner()">
+        </div>
+        <div class="form-group">
+          <label>Expected Annual Home Appreciation (%)</label>
+          <input type="number" id="planAppreciation" placeholder="3" min="-5" max="15" step="0.5" value="3" oninput="updatePlanner()">
+          <span class="field-hint">US long-run avg ~3–4%/yr. Recent years higher.</span>
+        </div>
+        <div class="form-group">
+          <label>Expected Annual Expense Inflation (%)</label>
+          <input type="number" id="planInflation" placeholder="2.5" min="0" max="10" step="0.5" value="2.5" oninput="updatePlanner()">
+          <span class="field-hint">Lifestyle costs tend to rise ~2–3%/yr</span>
+        </div>
+        <div class="form-group">
+          <label>Monthly Debt Paydown Beyond Minimums ($)</label>
+          <input type="number" id="planDebtPaydown" placeholder="0" min="0" value="0" oninput="updatePlanner()">
+          <span class="field-hint">Extra payments reducing existing debt each month</span>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Lending Flexibility</label>
+          <select id="planLendingMode" onchange="updatePlanner()">
+            <option value="conservative">Conservative (28% / 36% — traditional)</option>
+            <option value="moderate" selected>Moderate (31% / 43% — FHA-style)</option>
+            <option value="aggressive">Stretch (33% / 45% — some lenders allow)</option>
+          </select>
+          <span class="field-hint">Front-end (housing/income) / back-end (total debt/income) ratio limits used to determine readiness</span>
+        </div>
+      </div>
+      <div class="planner-output" id="plannerOutput">
+        <em>Calculating...</em>
+      </div>
+    </div>
+    </div></details>
+  `;
+
+  // Compute marginal tax rate for WWHBT income adjustments
+  // Bump annual gross by $12 ($1/mo) and measure the tax increase
+  const _margTaxBump = 12;
+  const _baseTaxAnnual = monthlyTax * 12;
+  let _bumpedTaxAnnual = _baseTaxAnnual;
+  const _taxMode = document.querySelector('input[name="taxMode"]:checked').value;
+  if (_taxMode === 'known' && taxKnownMode === 'pct') {
+    _bumpedTaxAnnual = _baseTaxAnnual + _margTaxBump * (num('taxMonthlyKnown') / 100);
+  } else if (_taxMode === 'known') {
+    _bumpedTaxAnnual = _baseTaxAnnual; // flat dollar — no change with income
+  } else {
+    // Use estimator: recalc with bumped income
+    const _tc = getTaxConfig();
+    const _annGross = grossIncome * 12 + _margTaxBump;
+    const _status = $('taxFilingStatus').value;
+    const _state = $('taxState').value;
+    const _kids = parseInt($('taxKids').value) || 0;
+    const _preTaxRet = retPreTaxMo * 12;
+    const _hsaAnn = hsaMo * 12;
+    const _agi = _annGross - _preTaxRet - _hsaAnn;
+    const { deduction: _ded, aboveLine: _al } = getDeductionAmount(_status);
+    const _taxable = Math.max(_agi - _al - _ded, 0);
+    let _fed = calcFederalTax(_taxable, _status);
+    _fed -= Math.min(_kids * _tc.childTaxCredit, _fed);
+    const _st = _agi * (_tc.stateRates[_state] || 0);
+    const _ss = Math.min(_annGross, _tc.ssWageCap) * _tc.ssRate;
+    const _med = _annGross * _tc.medicareRate;
+    _bumpedTaxAnnual = _fed + _st + _ss + _med;
+  }
+  const marginalTaxRate = Math.max(0, Math.min((_bumpedTaxAnnual - _baseTaxAnnual) / _margTaxBump, 0.60));
+
+  // Store baseline values for WWHBT sliders
+  window._wwhbtBaseline = {
+    grossIncome, down, totalLivingExp, totalDebt, rate, price, years,
+    tax, ins, hoa, totalExp, monthlyTax, retPreTaxMo, retPostTaxMo, hsaMo, savingsGoalMo,
+    marginalTaxRate
+  };
+
+  $('resultsCard').innerHTML = html;
+
+  // Initialize after DOM is ready
+  updateWWHBT();
+  updatePlanner();
+
+  // Show results panel
+  panels.forEach(p => p.classList.remove('active'));
+  stepBtns.forEach(b => { b.classList.remove('active'); b.classList.add('done'); });
+  stepBtns[4].classList.add('active');
+  $('results').classList.add('active');
+  cur = 4;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// --- What Would Have to Be True (WWHBT) ---
+function updateWWHBT() {
+  const b = window._wwhbtBaseline;
+  if (!b) return;
+
+  const slInc = parseFloat($('slIncome')?.value) || b.grossIncome;
+  const slDn = parseFloat($('slDown')?.value) || b.down;
+  const slExp = parseFloat($('slExp')?.value) || b.totalLivingExp;
+  const slDbt = parseFloat($('slDebt')?.value) || b.totalDebt;
+  const slRt = (parseFloat($('slRate')?.value) || (b.rate*100)) / 100;
+
+  // Recalc mortgage with adjusted values
+  const loan = b.price - slDn;
+  const r = slRt / 12;
+  const n = b.years * 12;
+  const mortPmt = r > 0 ? loan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : loan / n;
+  const pmi = (slDn / b.price < 0.2) ? loan * 0.005 / 12 : 0;
+  const totalHousing = mortPmt + b.tax + b.ins + b.hoa + pmi;
+
+  // Adjusted taxes: apply marginal rate to income change
+  const incDelta = slInc - b.grossIncome;
+  const adjMonthlyTax = b.monthlyTax + incDelta * (b.marginalTaxRate || 0);
+
+  // Adjusted expenses (keep retirement/HSA/savings from baseline, swap living expenses, use adjusted tax)
+  const adjTotalExp = adjMonthlyTax + b.retPreTaxMo + b.retPostTaxMo + b.hsaMo + (b.savingsGoalMo || 0) + slExp;
+
+  const frontEnd = totalHousing / slInc;
+  const backEnd = (totalHousing + slDbt) / slInc;
+  const residual = slInc - adjTotalExp - slDbt - totalHousing;
+
+  // Verdict (primary indicator — matches main calculate logic)
+  let verdict, verdictColor, verdictIcon;
+  if (frontEnd <= 0.28 && backEnd <= 0.36 && residual > 0) {
+    verdict = 'Recommended to Purchase'; verdictColor = 'var(--success)'; verdictIcon = '✅';
+  } else if (frontEnd <= 0.33 && backEnd <= 0.43 && residual > 0) {
+    verdict = 'Stretching It — Proceed with Caution'; verdictColor = 'var(--warning)'; verdictIcon = '⚠️';
+  } else {
+    verdict = 'Not Recommended to Purchase'; verdictColor = 'var(--danger)'; verdictIcon = '🚫';
+  }
+
+  // Score (secondary)
+  const fePts = frontEnd <= 0.28 ? 30 : frontEnd >= 0.50 ? 0 : Math.round(30 * (0.50 - frontEnd) / 0.22);
+  const bePts = backEnd <= 0.36 ? 30 : backEnd >= 0.55 ? 0 : Math.round(30 * (0.55 - backEnd) / 0.19);
+  const dpPct = b.price > 0 ? slDn / b.price : 0;
+  const dpPts = dpPct >= 0.20 ? 20 : Math.round(20 * dpPct / 0.20);
+  const residualPct = slInc > 0 ? residual / slInc : 0;
+  const cfPts = residualPct >= 0.15 ? 20 : residualPct <= 0 ? 0 : Math.round(20 * residualPct / 0.15);
+  const score = fePts + bePts + dpPts + cfPts;
+
+  // Update display — verdict first, then score + key ratios
+  if ($('wwhbtVerdict')) {
+    $('wwhbtVerdict').innerHTML = `<span style="font-size:1.3rem;">${verdictIcon}</span> ${verdict}`;
+    $('wwhbtVerdict').style.color = verdictColor;
+  }
+  if ($('wwhbtScore')) { $('wwhbtScore').textContent = score; $('wwhbtScore').style.color = verdictColor; }
+  if ($('wwhbtRatios')) {
+    $('wwhbtRatios').innerHTML = `
+      Housing-to-Income: <strong style="color:${frontEnd<=0.28?'var(--success)':frontEnd<=0.33?'var(--warning)':'var(--danger)'}">${pct(frontEnd)}</strong> (≤28% ideal) · 
+      DTI: <strong style="color:${backEnd<=0.36?'var(--success)':backEnd<=0.43?'var(--warning)':'var(--danger)'}">${pct(backEnd)}</strong> (≤36% ideal) · 
+      Cash Flow: <strong style="color:${residual>0?'var(--success)':'var(--danger)'}">${fmt(residual)}/mo</strong>
+    `;
+  }
+
+  // Update slider value labels + deltas
+  function showDelta(elId, current, baseline, isCurrency, invert) {
+    const diff = current - baseline;
+    const el = $(elId);
+    if (!el) return;
+    if (Math.abs(diff) < 0.01) { el.textContent = ''; return; }
+    const good = invert ? diff < 0 : diff > 0;
+    const sign = diff > 0 ? '+' : '';
+    el.className = 'sl-delta ' + (good ? 'positive' : 'negative');
+    el.textContent = isCurrency ? (sign + fmt(diff)) : (sign + diff.toFixed(2) + '%');
+  }
+
+  if ($('slIncVal')) $('slIncVal').textContent = fmt(slInc);
+  if ($('slDownVal')) $('slDownVal').textContent = fmt(slDn);
+  if ($('slExpVal')) $('slExpVal').textContent = fmt(slExp);
+  if ($('slDebtVal')) $('slDebtVal').textContent = fmt(slDbt);
+  if ($('slRateVal')) $('slRateVal').textContent = (slRt*100).toFixed(2) + '%';
+
+  showDelta('slIncDelta', slInc, b.grossIncome, true, false);
+  showDelta('slDownDelta', slDn, b.down, true, false);
+  showDelta('slExpDelta', slExp, b.totalLivingExp, true, true);
+  showDelta('slDebtDelta', slDbt, b.totalDebt, true, true);
+  showDelta('slRateDelta', slRt*100, b.rate*100, false, true);
+}
+
+function resetWWHBT() {
+  const b = window._wwhbtBaseline;
+  if (!b) return;
+  // Reset values — set value as string to avoid range clamping issues
+  const sl = (id, val) => { const e = $(id); if (e) e.value = val; };
+  sl('slIncome', Math.round(b.grossIncome));
+  sl('slDown', Math.round(b.down));
+  sl('slExp', Math.round(b.totalLivingExp));
+  sl('slDebt', Math.round(b.totalDebt));
+  sl('slRate', (b.rate * 100).toFixed(2));
+  updateWWHBT();
+}
+
+// --- Test a WWHBT scenario (shared helper) ---
+function testScenario(inc, dn, exp, dbt, ratePct) {
+  const b = window._wwhbtBaseline;
+  const loan = b.price - dn;
+  const r = (ratePct / 100) / 12;
+  const n = b.years * 12;
+  const mortPmt = r > 0 ? loan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : loan / n;
+  const pmi = (dn / b.price < 0.2) ? loan * 0.005 / 12 : 0;
+  const totalHousing = mortPmt + b.tax + b.ins + b.hoa + pmi;
+  const incDelta = inc - b.grossIncome;
+  const adjMonthlyTax = b.monthlyTax + incDelta * (b.marginalTaxRate || 0);
+  const adjTotalExp = adjMonthlyTax + b.retPreTaxMo + b.retPostTaxMo + b.hsaMo + (b.savingsGoalMo || 0) + exp;
+  const frontEnd = totalHousing / inc;
+  const backEnd = (totalHousing + dbt) / inc;
+  const residual = inc - adjTotalExp - dbt - totalHousing;
+  return { frontEnd, backEnd, residual, isRecommended: frontEnd <= 0.28 && backEnd <= 0.36 && residual > 0 };
+}
+
+// --- Auto-solve a single slider via binary search ---
+function autoSolve(param) {
+  const b = window._wwhbtBaseline;
+  if (!b) return;
+
+  // Read current slider values as starting point
+  const cur = {
+    inc: parseFloat($('slIncome')?.value) || b.grossIncome,
+    dn: parseFloat($('slDown')?.value) || b.down,
+    exp: parseFloat($('slExp')?.value) || b.totalLivingExp,
+    dbt: parseFloat($('slDebt')?.value) || b.totalDebt,
+    rt: parseFloat($('slRate')?.value) || (b.rate * 100)
+  };
+
+  const test = (val) => {
+    const args = [cur.inc, cur.dn, cur.exp, cur.dbt, cur.rt];
+    if (param === 'income') args[0] = val;
+    else if (param === 'down') args[1] = val;
+    else if (param === 'expenses') args[2] = val;
+    else if (param === 'debt') args[3] = val;
+    else if (param === 'rate') args[4] = val;
+    return testScenario(...args);
+  };
+
+  let lo, hi, sliderId, step, setter;
+  if (param === 'income') {
+    lo = cur.inc; hi = parseFloat($('slIncome').max); sliderId = 'slIncome'; step = 100;
+    setter = v => { $(sliderId).value = Math.round(v); };
+  } else if (param === 'down') {
+    lo = cur.dn; hi = parseFloat($('slDown').max); sliderId = 'slDown'; step = 1000;
+    setter = v => { $(sliderId).value = Math.round(v); };
+  } else if (param === 'expenses') {
+    lo = 0; hi = cur.exp; sliderId = 'slExp'; step = 50;
+    setter = v => { $(sliderId).value = Math.round(v); };
+  } else if (param === 'debt') {
+    lo = 0; hi = cur.dbt; sliderId = 'slDebt'; step = 25;
+    setter = v => { $(sliderId).value = Math.round(v); };
+  } else if (param === 'rate') {
+    lo = parseFloat($('slRate').min); hi = cur.rt; sliderId = 'slRate'; step = 0.125;
+    setter = v => { $(sliderId).value = v.toFixed(3); };
+  }
+
+  // For income/down: search upward (higher = better), find minimum passing value
+  // For expenses/debt/rate: search downward (lower = better), find maximum passing value
+  const searchUp = (param === 'income' || param === 'down');
+
+  // Check if already passing or impossible
+  if (test(searchUp ? lo : hi).isRecommended) { updateWWHBT(); return; } // already good
+  if (!test(searchUp ? hi : lo).isRecommended) {
+    // Can't solve with this slider alone — show hint
+    const hint = $('optimizeHint');
+    if (hint) { hint.textContent = `⚠️ Can't reach "Recommended" by adjusting ${param} alone. Try Optimize All.`; setTimeout(() => hint.textContent = '', 4000); }
+    return;
+  }
+
+  // Binary search
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    if (hi - lo < step) break;
+    if (test(mid).isRecommended === searchUp) { hi = mid; } else { lo = mid; }
+  }
+
+  // Snap to step — pick the passing side
+  const result = searchUp ? Math.ceil(hi / step) * step : Math.floor(lo / step) * step;
+  setter(result);
+  updateWWHBT();
+}
+
+// --- Optimize All: nudge multiple sliders to reach Recommended ---
+function optimizeAll() {
+  const b = window._wwhbtBaseline;
+  if (!b) return;
+
+  // Start from current slider positions
+  let inc = parseFloat($('slIncome')?.value) || b.grossIncome;
+  let dn = parseFloat($('slDown')?.value) || b.down;
+  let exp = parseFloat($('slExp')?.value) || b.totalLivingExp;
+  let dbt = parseFloat($('slDebt')?.value) || b.totalDebt;
+  let rt = parseFloat($('slRate')?.value) || (b.rate * 100);
+
+  if (testScenario(inc, dn, exp, dbt, rt).isRecommended) {
+    const hint = $('optimizeHint');
+    if (hint) { hint.textContent = '✅ Already at Recommended!'; setTimeout(() => hint.textContent = '', 3000); }
+    return;
+  }
+
+  const maxIter = 200;
+  const expFloor = exp * 0.5;   // won't cut expenses more than 50%
+  const dbtFloor = 0;
+  const incCeil = parseFloat($('slIncome').max);
+  const dnCeil = parseFloat($('slDown').max);
+  const rtFloor = parseFloat($('slRate').min);
+
+  for (let i = 0; i < maxIter; i++) {
+    if (testScenario(inc, dn, exp, dbt, rt).isRecommended) break;
+
+    // Priority: reduce expenses → reduce debt → increase down payment → reduce rate → increase income
+    if (exp > expFloor) { exp = Math.max(expFloor, exp - 50); continue; }
+    if (dbt > dbtFloor) { dbt = Math.max(dbtFloor, dbt - 25); continue; }
+    if (dn < dnCeil) { dn = Math.min(dnCeil, dn + 1000); continue; }
+    if (rt > rtFloor) { rt = Math.max(rtFloor, rt - 0.125); continue; }
+    if (inc < incCeil) { inc = Math.min(incCeil, inc + 100); continue; }
+    break; // exhausted all levers
+  }
+
+  // Apply to sliders
+  $('slIncome').value = Math.round(inc);
+  $('slDown').value = Math.round(dn);
+  $('slExp').value = Math.round(exp);
+  $('slDebt').value = Math.round(dbt);
+  $('slRate').value = rt.toFixed(3);
+  updateWWHBT();
+
+  const hint = $('optimizeHint');
+  if (hint) {
+    const res = testScenario(inc, dn, exp, dbt, rt);
+    hint.textContent = res.isRecommended
+      ? '✨ Found a combination that works! Review the changes above.'
+      : '⚠️ Couldn\'t fully reach Recommended within slider ranges.';
+    setTimeout(() => hint.textContent = '', 5000);
+  }
+}
+
+// --- When Will I Be Ready Planner ---
+function updatePlanner() {
+  const b = window._wwhbtBaseline;
+  if (!b) return;
+  const el = $('plannerOutput');
+  if (!el) return;
+
+  const monthlySavings = parseFloat($('planSavings')?.value) || 0;
+  const annualSavingsReturn = (parseFloat($('planGrowthSavings')?.value) || 0) / 100;
+  const monthlySavingsReturn = annualSavingsReturn / 12;
+  const annualGrowth = (parseFloat($('planGrowth')?.value) || 0) / 100;
+  const currentSaved = parseFloat($('planCurrentSavings')?.value) || 0;
+  const annualAppreciation = (parseFloat($('planAppreciation')?.value) || 0) / 100;
+  const annualInflation = (parseFloat($('planInflation')?.value) || 0) / 100;
+  const monthlyDebtPaydown = parseFloat($('planDebtPaydown')?.value) || 0;
+
+  // Lending flexibility thresholds
+  const lendMode = $('planLendingMode')?.value || 'moderate';
+  const limits = lendMode === 'conservative' ? { fe: 0.28, be: 0.36, label: '28%/36%' }
+               : lendMode === 'aggressive'   ? { fe: 0.33, be: 0.45, label: '33%/45%' }
+               :                                { fe: 0.31, be: 0.43, label: '31%/43%' };
+
+  if (monthlySavings <= 0 && annualGrowth <= 0 && monthlyDebtPaydown <= 0 && currentSaved <= 0) {
+    el.innerHTML = '<em>Enter a savings amount, income growth, or debt paydown to see your projection.</em>';
+    return;
+  }
+
+  // Check affordability at given parameters. downAmt = available savings to put down.
+  const checkAfford = (inc, downAmt, price, livingExp, debt, mTax, feLimit, beLimit) => {
+    // Try different down payment levels: what they have, or minimum 3.5% (FHA), whichever works
+    const minDown = price * 0.035; // FHA minimum
+    const adjDn = Math.min(downAmt, price);
+    const actualDown = Math.max(adjDn, 0);
+    const loan = price - actualDown;
+    const r = b.rate / 12;
+    const n = b.years * 12;
+    const mp = r > 0 ? loan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : loan / n;
+    const pmi = (price > 0 && actualDown / price < 0.2) ? loan * 0.005 / 12 : 0;
+    const taxMo = b.price > 0 ? (price * b.tax / b.price) : 0;
+    const insMo = b.price > 0 ? (price * b.ins / b.price) : 0;
+    const th = mp + taxMo + insMo + b.hoa + pmi;
+    const totalExp = mTax + b.retPreTaxMo + b.retPostTaxMo + b.hsaMo + (b.savingsGoalMo || 0) + livingExp;
+    const fe = inc > 0 ? th / inc : 999;
+    const be = inc > 0 ? (th + debt) / inc : 999;
+    const res = inc - totalExp - debt - th;
+    const hasMinDown = actualDown >= minDown;
+    return { fe, be, res, th, pass: fe <= feLimit && be <= beLimit && res > 0 && hasMinDown, downPct: actualDown / price, pmi };
+  };
+
+  // Initial state
+  let saved = currentSaved;
+  let monthlyIncome = b.grossIncome;
+  let homePrice = b.price;
+  let livingExp = b.totalLivingExp;
+  let debt = b.totalDebt;
+  let monthlyTax = b.monthlyTax;
+  const margRate = b.marginalTaxRate || 0;
+
+  // Check if already affordable now
+  const now = checkAfford(monthlyIncome, saved, homePrice, livingExp, debt, monthlyTax, limits.fe, limits.be);
+  if (now.pass) {
+    const dnPctStr = (now.downPct * 100).toFixed(1);
+    const pmiNote = now.pmi > 0 ? ` (includes ${fmt(Math.round(now.pmi))}/mo PMI — removable once you reach 20% equity)` : '';
+    el.innerHTML = `
+      <div class="timeline-date" style="color:var(--success)">You're ready now! 🎉</div>
+      <div class="timeline-detail">Based on your current finances, this home is within your affordability range at ${limits.label} lending limits.</div>
+      <div style="margin-top:8px;font-size:.85rem;color:var(--muted);">Down payment: ${fmt(Math.round(Math.min(saved, homePrice)))} (${dnPctStr}%)${pmiNote}</div>
+    `;
+    return;
+  }
+
+  // Simulate month by month
+  const maxMonths = 360;
+  let readyMonth = -1;
+  let snap = {};
+
+  for (let month = 1; month <= maxMonths; month++) {
+    // Grow savings balance with investment returns, then add new savings
+    saved = saved * (1 + monthlySavingsReturn) + monthlySavings;
+
+    // Pay down debt
+    if (monthlyDebtPaydown > 0 && debt > 0) {
+      debt = Math.max(0, debt - monthlyDebtPaydown);
+    }
+
+    // Annual adjustments
+    if (month % 12 === 0) {
+      monthlyIncome *= (1 + annualGrowth);
+      homePrice *= (1 + annualAppreciation);
+      livingExp *= (1 + annualInflation);
+      const incDelta = monthlyIncome - b.grossIncome;
+      monthlyTax = b.monthlyTax + incDelta * margRate;
+    }
+
+    const result = checkAfford(monthlyIncome, saved, homePrice, livingExp, debt, monthlyTax, limits.fe, limits.be);
+    if (result.pass) {
+      readyMonth = month;
+      snap = {
+        income: monthlyIncome,
+        saved: saved,
+        homePrice: homePrice,
+        livingExp: livingExp,
+        debt: debt,
+        housing: result.th,
+        fe: result.fe,
+        be: result.be,
+        residual: result.res,
+        downPct: result.downPct,
+        pmi: result.pmi
+      };
+      break;
+    }
+  }
+
+  if (readyMonth === -1) {
+    // Determine the primary bottleneck
+    const final = checkAfford(monthlyIncome, saved, homePrice, livingExp, debt, monthlyTax, limits.fe, limits.be);
+    let bottlenecks = [];
+    if (final.fe > limits.fe) bottlenecks.push('Housing-to-income ratio (' + (final.fe*100).toFixed(1) + '%) exceeds the ' + (limits.fe*100) + '% limit — home appreciation is outpacing income growth.');
+    if (final.be > limits.be) bottlenecks.push('Total debt-to-income ratio (' + (final.be*100).toFixed(1) + '%) exceeds the ' + (limits.be*100) + '% limit — consider accelerating debt payoff.');
+    if (final.res <= 0) bottlenecks.push('Monthly cash flow is negative after all expenses — expenses are growing faster than income.');
+    if (saved < homePrice * 0.035) bottlenecks.push('Savings haven\'t reached the 3.5% minimum down payment even after 30 years.');
+
+    const tips = [];
+    if (lendMode === 'conservative') tips.push('🔄 Try switching to <strong>Moderate</strong> lending limits — most FHA lenders use 31%/43%, which is more realistic for first-time buyers.');
+    tips.push('🏠 Consider targeting a lower-priced home — the <strong>"What Can I Afford?"</strong> section above shows your max price.');
+    if (annualAppreciation > 3) tips.push('📉 Your home appreciation rate (' + annualAppreciation*100 + '%) may be aggressive. The long-run US average is ~3%. Try a lower number.');
+    if (annualGrowth < 3) tips.push('📈 Even modest income growth (3-5%) makes a big difference over time. Factor in promotions, job changes, or side income.');
+    if (monthlySavings < 500) tips.push('💰 Small increases in monthly savings add up fast with compound returns.');
+    if (annualSavingsReturn < 4) tips.push('📊 A high-yield savings account or index fund can significantly accelerate your savings growth.');
+    if (debt > 0 && monthlyDebtPaydown === 0) tips.push('📉 Paying down debt frees up your back-end ratio — even $200/mo extra makes a difference.');
+
+    el.innerHTML = `
+      <div class="timeline-date" style="color:var(--warning)">More than 30 years at current pace</div>
+      <div class="timeline-detail" style="margin-bottom:10px;">With these assumptions, this specific home stays out of reach — but that doesn't mean homeownership is! Here's what's happening:</div>
+      <ul style="font-size:.85rem;line-height:1.8;margin:0 0 12px 18px;color:var(--text);">
+        ${bottlenecks.map(b => '<li>' + b + '</li>').join('')}
+      </ul>
+      <div style="margin-top:8px;font-size:.85rem;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div>Projected home price in 30 yrs: <strong>${fmt(Math.round(homePrice))}</strong></div>
+        <div>Projected monthly income: <strong>${fmt(Math.round(monthlyIncome))}</strong></div>
+        <div>Projected savings: <strong>${fmt(Math.round(saved))}</strong></div>
+        <div>Projected monthly debt: <strong>${fmt(Math.round(debt))}</strong></div>
+      </div>
+      <div style="margin-top:14px;padding:12px 14px;background:var(--primary-light);border-radius:8px;font-size:.85rem;">
+        <strong>💡 Things to try:</strong>
+        <ul style="margin:6px 0 0 18px;line-height:1.9;">
+          ${tips.map(t => '<li>' + t + '</li>').join('')}
+        </ul>
+      </div>
+    `;
+    return;
+  }
+
+  // Format the result
+  const readyDate = new Date();
+  readyDate.setMonth(readyDate.getMonth() + readyMonth);
+  const dateStr = readyDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const readyYears = Math.floor(readyMonth / 12);
+  const readyMo = readyMonth % 12;
+  const timeStr = readyYears > 0
+    ? readyYears + ' year' + (readyYears>1?'s':'') + (readyMo > 0 ? ' ' + readyMo + ' month' + (readyMo>1?'s':'') : '')
+    : readyMo + ' month' + (readyMo>1?'s':'');
+
+  // Determine what changed the most
+  const levers = [];
+  if (snap.income > b.grossIncome * 1.02) levers.push('📈 Income growth (' + fmt(Math.round(b.grossIncome)) + ' → ' + fmt(Math.round(snap.income)) + '/mo)');
+  if (snap.saved > currentSaved * 1.5 || snap.saved > currentSaved + 5000) levers.push('💰 Savings accumulation (' + fmt(Math.round(currentSaved)) + ' → ' + fmt(Math.round(snap.saved)) + ')');
+  if (snap.debt < b.totalDebt * 0.8) levers.push('📉 Debt reduction (' + fmt(Math.round(b.totalDebt)) + ' → ' + fmt(Math.round(snap.debt)) + '/mo)');
+  if (snap.homePrice > b.price * 1.05) levers.push('⚠️ Home appreciated to ' + fmt(Math.round(snap.homePrice)));
+
+  const pmiNote = snap.pmi > 0 
+    ? `<div style="margin-top:8px;font-size:.82rem;padding:8px 12px;background:#fff8e1;border-radius:6px;">💡 Your down payment would be <strong>${(snap.downPct*100).toFixed(1)}%</strong>, which includes PMI of ~${fmt(Math.round(snap.pmi))}/mo. PMI drops off once you reach 20% equity — through payments and appreciation, that could be just a few years.</div>`
+    : '';
+
+  el.innerHTML = `
+    <div class="timeline-date">${dateStr}</div>
+    <div class="timeline-detail">Approximately <strong>${timeStr}</strong> from now</div>
+
+    <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="background:var(--primary-light);border-radius:8px;padding:10px 14px;text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;color:var(--primary);">${fmt(Math.round(snap.homePrice))}</div>
+        <div style="font-size:.75rem;color:var(--muted);">Home price at that time</div>
+      </div>
+      <div style="background:var(--primary-light);border-radius:8px;padding:10px 14px;text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;color:var(--primary);">${fmt(Math.round(snap.income))}</div>
+        <div style="font-size:.75rem;color:var(--muted);">Monthly income</div>
+      </div>
+      <div style="background:var(--primary-light);border-radius:8px;padding:10px 14px;text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;color:var(--primary);">${fmt(Math.round(snap.saved))} (${(snap.downPct*100).toFixed(1)}%)</div>
+        <div style="font-size:.75rem;color:var(--muted);">Down payment available</div>
+      </div>
+      <div style="background:var(--primary-light);border-radius:8px;padding:10px 14px;text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;color:var(--primary);">${fmt(Math.round(snap.housing))}</div>
+        <div style="font-size:.75rem;color:var(--muted);">Monthly housing cost</div>
+      </div>
+    </div>
+
+    ${pmiNote}
+
+    ${levers.length > 0 ? `
+    <div style="margin-top:14px;font-size:.85rem;">
+      <strong>Key factors that get you there:</strong>
+      <ul style="margin:6px 0 0 18px;line-height:1.8;">
+        ${levers.map(l => '<li>' + l + '</li>').join('')}
+      </ul>
+    </div>` : ''}
+
+    <div style="margin-top:14px;">
+      <div class="milestone-bar">
+        <span class="ms-label">${fmt(Math.round(currentSaved))}</span>
+        <div class="ms-track"><div class="ms-fill" style="width:${Math.min(currentSaved / snap.saved * 100, 100)}%"></div></div>
+        <span class="ms-label">${fmt(Math.round(snap.saved))}</span>
+      </div>
+      <div style="text-align:center;font-size:.78rem;color:var(--muted);margin-top:4px;">Savings progress toward down payment</div>
+    </div>
+  `;
+}
+
+// --- Simple mode calculation (rules of thumb) ---
+function simpleCalculate() {
+  const annualIncome = num('sqIncome');
+  const monthlyDebt = num('sqDebt');
+  const price = num('sqPrice');
+
+  if (annualIncome <= 0) { alert('Please enter your household income.'); return; }
+  if (price <= 0) { alert('Please enter a home price.'); return; }
+
+  const grossIncome = annualIncome / 12;
+
+  // Down payment
+  const downSel = $('sqDown').value;
+  const down = downSel === 'custom' ? num('sqDownCustom') : price * parseFloat(downSel);
+
+  // Rules of thumb
+  const totalExp = grossIncome * 0.50; // 50% of gross for living expenses
+  const totalDebt = monthlyDebt;
+  const rate = (num('sqRate') || 6.5) / 100;
+  const years = 30;
+
+  // Use county/state rates if selected, otherwise defaults
+  const sqStateAbbr = $('sqState')?.value || '';
+  const sqCountyRate = parseFloat($('sqCounty')?.value) || 0;
+  const taxRate = sqCountyRate > 0 ? sqCountyRate : 0.011;
+  const insRate = (sqStateAbbr && STATE_INS_RATE[sqStateAbbr]) ? STATE_INS_RATE[sqStateAbbr] : 0.0035;
+  const tax = (price * taxRate) / 12;
+  const ins = (price * insRate) / 12;
+  const hoa = 0;
+
+  const loan = price - down;
+  const r = rate / 12;
+  const n = years * 12;
+  const mortPmt = r > 0 ? loan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : loan / n;
+  const pmi = (down / price < 0.2) ? loan * 0.005 / 12 : 0;
+  const totalHousing = mortPmt + tax + ins + hoa + pmi;
+  const totalInterest = (mortPmt * n) - loan;
+
+  const frontEnd = totalHousing / grossIncome;
+  const backEnd = (totalHousing + totalDebt) / grossIncome;
+  const residual = grossIncome - totalExp - totalDebt - totalHousing;
+
+  // Verdict
+  let verdict, verdictClass, tagline;
+  if (frontEnd <= 0.28 && backEnd <= 0.36 && residual > 0) {
+    verdict = '✅ Looks Affordable!'; verdictClass = 'green';
+    tagline = 'Based on quick estimates, you appear well-positioned for this home.';
+  } else if (frontEnd <= 0.33 && backEnd <= 0.43 && residual > 0) {
+    verdict = '⚠️ Stretching It'; verdictClass = 'yellow';
+    tagline = 'This may be doable, but it will be tight. Consider a lower price or bigger down payment.';
+  } else {
+    verdict = '🚫 Not Recommended'; verdictClass = 'red';
+    tagline = 'This home likely exceeds what\'s comfortable for your income level.';
+  }
+
+  // Readiness Score
+  const fePts = frontEnd <= 0.28 ? 30 : frontEnd >= 0.50 ? 0 : Math.round(30 * (0.50 - frontEnd) / 0.22);
+  const bePts = backEnd <= 0.36 ? 30 : backEnd >= 0.55 ? 0 : Math.round(30 * (0.55 - backEnd) / 0.19);
+  const dpPct = price > 0 ? down / price : 0;
+  const dpPts = dpPct >= 0.20 ? 20 : Math.round(20 * dpPct / 0.20);
+  const residualPct = grossIncome > 0 ? residual / grossIncome : 0;
+  const cfPts = residualPct >= 0.15 ? 20 : residualPct <= 0 ? 0 : Math.round(20 * residualPct / 0.15);
+  const readinessScore = fePts + bePts + dpPts + cfPts;
+  const scoreColor = readinessScore >= 75 ? 'var(--success)' : readinessScore >= 50 ? 'var(--warning)' : 'var(--danger)';
+  const scoreClass = readinessScore >= 75 ? 'green' : readinessScore >= 50 ? 'yellow' : 'red';
+  const scoreWord = readinessScore >= 85 ? 'Excellent' : readinessScore >= 75 ? 'Strong' : readinessScore >= 60 ? 'Fair' : readinessScore >= 40 ? 'Needs Work' : 'Not Ready';
+  const circumference = 2 * Math.PI * 66;
+  const dashOffset = circumference - (readinessScore / 100) * circumference;
+
+  function factorBar(label, pts, max, detail, tooltip) {
+    const pctW = Math.round(pts / max * 100);
+    const c = pctW >= 80 ? 'var(--success)' : pctW >= 50 ? 'var(--warning)' : 'var(--danger)';
+    const icon = tooltip ? ' <span class="info-tip" tabindex="0">ⓘ<span class="info-tip-text">' + tooltip + '</span></span>' : '';
+    return `<div class="score-factor"><div class="sf-label">${label}${icon}</div><div class="sf-val">${pts}/${max} <span style="font-weight:400;color:var(--muted);font-size:.78rem;">${detail}</span></div><div class="sf-bar"><div class="sf-fill" style="width:${pctW}%;background:${c}"></div></div></div>`;
+  }
+
+  const html = `
+    <div class="score-section">
+      <div class="score-ring">
+        <svg width="170" height="170" viewBox="-10 -10 160 160">
+          <circle class="bg" cx="70" cy="70" r="66"/>
+          <circle class="fg" cx="70" cy="70" r="66" stroke="${scoreColor}" stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}"/>
+        </svg>
+        <div class="score-number" style="color:${scoreColor}">${readinessScore}<small>/ 100</small></div>
+      </div>
+      <div class="score-label ${scoreClass}">Home Readiness: ${scoreWord}</div>
+      <div class="score-factors">
+        ${factorBar('Housing-to-Income', fePts, 30, pct(frontEnd))}
+        ${factorBar('Debt-to-Income', bePts, 30, pct(backEnd))}
+        ${factorBar('Down Payment', dpPts, 20, pct(dpPct))}
+        ${factorBar('Cash Flow Cushion', cfPts, 20, pct(residualPct), "What's left after all expenses, savings, debt & housing. Switch to Detailed Analysis to enter specific savings goals for a more accurate score.")}
+      </div>
+    </div>
+
+    <div class="result-hero">
+      <div class="verdict ${verdictClass}">${verdict}</div>
+      <div class="tagline">${tagline}</div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric-card"><div class="val">${fmt(totalHousing)}</div><div class="lbl">Est. Monthly Housing Cost</div></div>
+      <div class="metric-card"><div class="val">${fmt(mortPmt)}</div><div class="lbl">Principal &amp; Interest</div></div>
+      <div class="metric-card"><div class="val">${fmt(residual)}</div><div class="lbl">${residual >= 0 ? 'Monthly Cash Left Over' : 'Monthly Shortfall'}</div></div>
+      <div class="metric-card"><div class="val">${pct(frontEnd)}</div><div class="lbl">Housing-to-Income (≤28% ideal)</div></div>
+      <div class="metric-card"><div class="val">${pct(backEnd)}</div><div class="lbl">Debt-to-Income (≤36% ideal)</div></div>
+      <div class="metric-card"><div class="val">${fmt(down)} (${((down/price)*100).toFixed(1)}%)</div><div class="lbl">Down Payment</div></div>
+    </div>
+
+    <details class="accordion">
+    <summary>📊 Monthly Budget Breakdown (Estimated)</summary>
+    <div class="acc-body">
+    <table class="breakdown">
+      <tr><th>Item</th><th class="num">Amount</th></tr>
+      <tr><td>Gross Monthly Income</td><td class="num">${fmt(grossIncome)}</td></tr>
+      <tr><td>− Living Expenses <em style="color:var(--muted)">(est. 50%)</em></td><td class="num">${fmt(totalExp)}</td></tr>
+      <tr><td>− Existing Debt Payments</td><td class="num">${fmt(totalDebt)}</td></tr>
+      <tr><td>− Mortgage (P&amp;I) <em style="color:var(--muted)">(${(rate*100).toFixed(2)}%, 30yr)</em></td><td class="num">${fmt(mortPmt)}</td></tr>
+      <tr><td>− Property Tax <em style="color:var(--muted)">(${(taxRate*100).toFixed(2)}%)</em></td><td class="num">${fmt(tax)}</td></tr>
+      <tr><td>− Home Insurance <em style="color:var(--muted)">(${(insRate*100).toFixed(2)}%)</em></td><td class="num">${fmt(ins)}</td></tr>
+      ${pmi ? `<tr><td>− Est. PMI</td><td class="num">${fmt(pmi)}</td></tr>` : ''}
+      <tr style="font-weight:700;${residual<0?'color:var(--danger)':''}"><td>= Remaining Cash Flow</td><td class="num">${fmt(residual)}</td></tr>
+    </table>
+    </div></details>
+
+    <details class="accordion">
+    <summary>🏦 Loan Summary</summary>
+    <div class="acc-body">
+    <table class="breakdown">
+      <tr><td>Home Price</td><td class="num">${fmt(price)}</td></tr>
+      <tr><td>Loan Amount</td><td class="num">${fmt(loan)}</td></tr>
+      <tr><td>Total Interest Paid (${years} yr)</td><td class="num">${fmt(totalInterest)}</td></tr>
+      <tr><td>Total Cost of Home</td><td class="num">${fmt(price + totalInterest)}</td></tr>
+    </table>
+    </div></details>
+
+    ${(() => {
+      const fixedDown = down;
+
+      function testAffordPrice(p) {
+        const d = Math.min(fixedDown, p);
+        const ln = p - d;
+        const mp = r > 0 ? ln * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : ln / n;
+        const pm = (p > 0 && d / p < 0.2) ? ln * 0.005 / 12 : 0;
+        const th = mp + (p * taxRate / 12) + (p * insRate / 12) + hoa + pm;
+        const fe = th / grossIncome;
+        const be = (th + totalDebt) / grossIncome;
+        const res = grossIncome - totalExp - totalDebt - th;
+        return fe <= 0.28 && be <= 0.36 && res > 0;
+      }
+
+      let lo = 0, hi = price * 5;
+      for (let i = 0; i < 60; i++) {
+        const mid = (lo + hi) / 2;
+        if (hi - lo < 500) break;
+        if (testAffordPrice(mid)) lo = mid; else hi = mid;
+      }
+      const maxPrice = Math.floor(lo / 1000) * 1000;
+
+      const diff = maxPrice - price;
+      const diffAbs = Math.abs(diff);
+      let affordMsg, affordColor, affordIcon;
+      if (diff >= 0) {
+        affordColor = 'var(--success)'; affordIcon = '🏡';
+        affordMsg = diff < 5000 ? 'Your target home is right at your max — good match!' : 'You could afford up to <strong>' + fmt(diffAbs) + ' more</strong> than your target price.';
+      } else {
+        affordColor = diffAbs < price * 0.10 ? 'var(--warning)' : 'var(--danger)';
+        affordIcon = diffAbs < price * 0.10 ? '⚠️' : '🚫';
+        affordMsg = 'Your target is <strong>' + fmt(diffAbs) + ' above</strong> what\'s recommended. Consider a home closer to your max.';
+      }
+
+      const maxDown = Math.min(fixedDown, maxPrice);
+      const maxDpPct = maxPrice > 0 ? maxDown / maxPrice : 0;
+      const maxLoan = maxPrice - maxDown;
+      const maxMort = r > 0 ? maxLoan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : (n > 0 ? maxLoan / n : 0);
+      const maxPmi = (maxPrice > 0 && maxDown / maxPrice < 0.2) ? maxLoan * 0.005 / 12 : 0;
+      const maxHousing = maxMort + (maxPrice * taxRate / 12) + (maxPrice * insRate / 12) + hoa + maxPmi;
+
+      return '<div style="background:' + (diff >= 0 ? '#f0fdf4' : diff > -price*0.10 ? '#fffbeb' : '#fef2f2') + ';border-radius:10px;padding:20px 24px;margin:24px 0 8px;">'
+        + '<h3 style="margin:0 0 8px;">' + affordIcon + ' What Can I Afford?</h3>'
+        + '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'
+        + '<span style="font-size:1.6rem;font-weight:800;color:' + affordColor + ';">' + fmt(maxPrice) + '</span>'
+        + '<span style="font-size:.88rem;color:var(--muted);">max recommended home price</span>'
+        + '</div>'
+        + '<p style="margin:8px 0 0;font-size:.88rem;color:var(--text);">' + affordMsg + '</p>'
+        + '<table class="breakdown" style="margin-top:12px;">'
+        + '<tr><td>Your Target</td><td class="num">' + fmt(price) + '</td></tr>'
+        + '<tr><td>Max Recommended</td><td class="num" style="color:' + affordColor + ';font-weight:700;">' + fmt(maxPrice) + '</td></tr>'
+        + '<tr><td>Difference</td><td class="num">' + (diff >= 0 ? '+' : '−') + fmt(diffAbs) + '</td></tr>'
+        + '<tr><td>Down Payment (' + (maxDpPct*100).toFixed(1) + '%)</td><td class="num">' + fmt(Math.round(maxDown)) + '</td></tr>'
+        + '<tr><td>Est. Monthly Housing</td><td class="num">' + fmt(Math.round(maxHousing)) + '</td></tr>'
+        + '</table>'
+        + '<p style="margin:8px 0 0;font-size:.75rem;color:var(--muted);">Assumes your ' + fmt(fixedDown) + ' down payment, ' + (rate*100).toFixed(2) + '% rate, 30-yr term. Tax &amp; insurance at standard rates.</p>'
+        + '</div>';
+    })()}
+
+    <div class="assumptions-note" style="margin-top:20px;">
+      <strong>⚡ Quick Check Mode — estimates used</strong>
+      These results use standard rules of thumb. For a more precise assessment with your actual expenses, taxes, and insurance, switch to <a href="#" onclick="switchMode('detailed');return false;" style="color:var(--primary);font-weight:600;">Detailed Analysis</a>.
+    </div>
+
+    ${verdictClass !== 'green' ? `
+    <h3 style="margin:24px 0 4px;">💡 Tips to Improve Affordability</h3>
+    <ul class="tips">
+      <li><strong>Increase your down payment</strong> — reduces the loan and may eliminate PMI.</li>
+      <li><strong>Look at lower-priced homes</strong> — even a 5-10% drop in price helps significantly.</li>
+      <li><strong>Pay down existing debt first</strong> — this directly lowers your DTI ratio.</li>
+      <li><strong>Boost income</strong> — a side income stream improves all ratios.</li>
+    </ul>` : `
+    <h3 style="margin:24px 0 4px;">💡 Smart Next Steps</h3>
+    <ul class="tips">
+      <li><strong>Get pre-approved</strong> — a lender pre-approval letter strengthens your offer.</li>
+      <li><strong>Build an emergency fund</strong> — aim for 3-6 months of the new housing cost.</li>
+      <li><strong>Budget for closing costs</strong> — typically 2-5% of the home price.</li>
+      <li><strong>Switch to <a href="#" onclick="switchMode('detailed');return false;">Detailed Analysis</a></strong> to enter your real expenses and get a precise result.</li>
+    </ul>`}
+  `;
+
+  $('resultsCard').innerHTML = html;
+  $('simpleMode').classList.remove('active');
+  $('results').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// --- Auto-save & restore from localStorage ---
+const SAVE_KEY = 'homeAffordabilityData';
+
+/* Update accordion summary hints with running totals */
+function updateAccordionHints() {
+  const f = v => '$' + Math.round(v).toLocaleString();
+  // Tax hint
+  const taxMode = document.querySelector('input[name="taxMode"]:checked');
+  if (taxMode) {
+    let mo = 0;
+    if (taxMode.value === 'known') {
+      const knownMode = document.querySelector('input[name="taxKnownMode"]:checked');
+      const v = num('taxMonthlyKnown');
+      mo = knownMode && knownMode.value === 'pct' ? num('grossIncome') * v / 100 : v;
+    }
+    const el = $('taxAccHint');
+    if (el) el.textContent = mo > 0 ? f(mo) + '/mo' : '';
+  }
+  // Retirement hint
+  const pre = num('retPreTax'), post = num('retPostTax'), hsa = num('hsaAmount'), sav = num('monthlySavingsGoal');
+  const retTotal = pre + post + hsa + sav;
+  const retEl = $('retAccHint');
+  if (retEl) retEl.textContent = retTotal > 0 ? f(retTotal) + '/mo' : '';
+  // Living expenses hint
+  const rows = document.querySelectorAll('#expList .exp-row');
+  let expTotal = 0;
+  rows.forEach(r => { const inp = r.querySelector('.exp-amt'); if (inp) expTotal += parseFloat(inp.value) || 0; });
+  const expEl = $('expAccHint');
+  if (expEl) expEl.textContent = expTotal > 0 ? f(expTotal) + '/mo' : '';
+}
+
+function saveAll() {
+  const data = {
+    mode: currentMode,
+    sqIncome: $('sqIncome').value,
+    sqDebt: $('sqDebt').value,
+    sqPrice: $('sqPrice').value,
+    sqDown: $('sqDown').value,
+    sqDownCustom: $('sqDownCustom').value,
+    sqRate: $('sqRate').value,
+    sqState: $('sqState').value,
+    sqCounty: $('sqCounty').value,
+    incPeriod: document.querySelector('input[name="incPeriod"]:checked')?.value || 'monthly',
+    incSalary: $('incSalary').value,
+    incSpouse: $('incSpouse').value,
+    incSide: $('incSide').value,
+    incOther: $('incOther').value,
+    // Tax fields
+    taxMode: document.querySelector('input[name="taxMode"]:checked')?.value || 'known',
+    taxMonthlyKnown: $('taxMonthlyKnown').value,
+    taxKnownMode: taxKnownMode,
+    taxYear: $('taxYear').value,
+    taxFilingStatus: $('taxFilingStatus').value,
+    taxState: $('taxState').value,
+    taxKids: $('taxKids').value,
+    deductionMethod: document.querySelector('input[name="deductionMethod"]:checked')?.value || 'standard',
+    taxAboveLineDeductions: $('taxAboveLineDeductions').value,
+    taxAboveLineItemized: $('taxAboveLineItemized').value,
+    itemMortgageInt: $('itemMortgageInt').value,
+    itemSALT: $('itemSALT').value,
+    itemCharity: $('itemCharity').value,
+    itemMedical: $('itemMedical').value,
+    itemOther: $('itemOther').value,
+    // Retirement & HSA
+    retMode: retMode,
+    rothMode: rothMode,
+    retPreTax: $('retPreTax').value,
+    retPostTax: $('retPostTax').value,
+    hsaAmount: $('hsaAmount').value,
+    monthlySavingsGoal: $('monthlySavingsGoal').value,
+    // Home
+    homePrice: $('homePrice').value,
+    downPayment: $('downPayment').value,
+    mortRate: $('mortRate').value,
+    mortTerm: $('mortTerm').value,
+    propTax: $('propTax').value,
+    homeIns: $('homeIns').value,
+    hoa: $('hoa').value,
+    homeState: $('homeState').value,
+    homeCounty: $('homeCounty').value,
+    expenses: [],
+    debts: []
+  };
+  document.querySelectorAll('#expList .expense-row').forEach(r => {
+    const inputs = r.querySelectorAll('input');
+    data.expenses.push({ name: inputs[0].value, amount: inputs[1].value });
+  });
+  document.querySelectorAll('#debtList .expense-row').forEach(r => {
+    const inputs = r.querySelectorAll('input');
+    data.debts.push({ name: inputs[0].value, amount: inputs[1].value });
+  });
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+}
+
+function restoreSaved() {
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    // Mode
+    if (data.mode) switchMode(data.mode);
+    // Simple fields
+    ['sqIncome','sqDebt','sqPrice','sqDownCustom','sqRate'].forEach(id => {
+      if (data[id]) $(id).value = data[id];
+    });
+    if (data.sqDown) { $('sqDown').value = data.sqDown; $('sqDownCustomWrap').style.display = data.sqDown === 'custom' ? '' : 'none'; }
+    if (data.sqState) { $('sqState').value = data.sqState; sqStateChange(); }
+    if (data.sqCounty) { $('sqCounty').value = data.sqCounty; }
+    // Tax fields
+    if (data.taxMode) {
+      const el = document.querySelector(`input[name="taxMode"][value="${data.taxMode}"]`);
+      if (el) { el.checked = true; toggleTaxMode(); }
+    }
+    ['taxMonthlyKnown','taxKids','taxAboveLineDeductions','taxAboveLineItemized','itemMortgageInt','itemSALT','itemCharity','itemMedical','itemOther'].forEach(id => { if (data[id]) $(id).value = data[id]; });
+    if (data.taxKnownMode) {
+      taxKnownMode = data.taxKnownMode;
+      const panel = $('taxKnownPanel');
+      const btns = panel.querySelectorAll('.input-mode-switch button');
+      btns.forEach(b => b.classList.remove('active'));
+      btns[taxKnownMode === 'dollar' ? 0 : 1].classList.add('active');
+      $('taxKnownHint').textContent = taxKnownMode === 'dollar' ? 'Monthly dollar amount' : 'Effective tax rate (% of gross income)';
+    }
+    if (data.deductionMethod) {
+      const el = document.querySelector(`input[name="deductionMethod"][value="${data.deductionMethod}"]`);
+      if (el) { el.checked = true; toggleDeductionMethod(); }
+    }
+    if (data.taxYear) $('taxYear').value = data.taxYear;
+    if (data.taxFilingStatus) $('taxFilingStatus').value = data.taxFilingStatus;
+    if (data.taxState) $('taxState').value = data.taxState;
+    // Retirement & HSA
+    if (data.retMode) {
+      retMode = data.retMode;
+      const btns = document.querySelectorAll('.input-mode-switch')[0].querySelectorAll('button');
+      btns.forEach(b => b.classList.remove('active'));
+      btns[retMode === 'dollar' ? 0 : 1].classList.add('active');
+      $('retPreTaxHint').textContent = retMode === 'dollar' ? 'Monthly dollar amount' : 'Percentage of gross income';
+    }
+    if (data.rothMode) {
+      rothMode = data.rothMode;
+      const btns = document.querySelectorAll('.input-mode-switch')[1].querySelectorAll('button');
+      btns.forEach(b => b.classList.remove('active'));
+      btns[rothMode === 'dollar' ? 0 : 1].classList.add('active');
+      $('retPostTaxHint').textContent = rothMode === 'dollar' ? 'Monthly dollar amount' : 'Percentage of gross income';
+    }
+    ['retPreTax','retPostTax','hsaAmount','monthlySavingsGoal'].forEach(id => { if (data[id]) $(id).value = data[id]; });
+    // Income period
+    const periodEl = document.querySelector(`input[name="incPeriod"][value="${data.incPeriod}"]`);
+    if (periodEl) periodEl.checked = true;
+    // Simple fields
+    ['incSalary','incSpouse','incSide','incOther','homePrice','downPayment','mortRate','propTax','homeIns','hoa'].forEach(id => {
+      if (data[id]) $(id).value = data[id];
+    });
+    if (data.homeState) { $('homeState').value = data.homeState; onStateChange(); }
+    if (data.homeCounty) { $('homeCounty').value = data.homeCounty; suggestTaxIns(); }
+    if (data.mortTerm) $('mortTerm').value = data.mortTerm;
+    // Expenses
+    if (data.expenses && data.expenses.length) {
+      $('expList').innerHTML = '';
+      expId = 0;
+      data.expenses.forEach(e => addExpense(e.name, e.amount));
+    }
+    // Debts
+    if (data.debts && data.debts.length) {
+      $('debtList').innerHTML = '';
+      debtId = 0;
+      data.debts.forEach(d => addDebt(d.name, d.amount));
+    }
+  } catch(e) { /* ignore bad data */ }
+}
+
+// Restore on load
+restoreSaved();
+updateAccordionHints();
+
+// Save on any input change
+document.addEventListener('input', () => { saveAll(); updateAccordionHints(); });
+document.addEventListener('change', saveAll);
+</script>
+</body>
+</html>
