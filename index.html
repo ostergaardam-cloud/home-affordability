@@ -44,8 +44,8 @@
   .assumptions-note strong { display: block; margin-bottom: 4px; font-size: .85rem; }
 
   /* Steps nav */
-  .steps { display: flex; justify-content: center; gap: 4px; margin: 28px 0 24px; flex-wrap: wrap; }
-  .steps button { background: var(--card); border: 2px solid var(--border); border-radius: 999px; padding: 8px 20px; font-size: .85rem; cursor: pointer; font-weight: 600; color: var(--muted); transition: .2s; }
+  .steps { display: flex; justify-content: center; gap: 4px; margin: 28px 0 24px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .steps button { background: var(--card); border: 2px solid var(--border); border-radius: 999px; padding: 8px 20px; font-size: .85rem; cursor: pointer; font-weight: 600; color: var(--muted); transition: .2s; white-space: nowrap; flex-shrink: 0; }
   .steps button.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
   .steps button.done { border-color: var(--success); color: var(--success); }
 
@@ -63,6 +63,8 @@
   @media(max-width:600px){ .form-grid { grid-template-columns: 1fr; } }
   .form-group { display: flex; flex-direction: column; }
   .form-group.full { grid-column: 1 / -1; }
+  .radio-row { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 12px; }
+  .radio-row label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: .88rem; white-space: nowrap; }
   label { font-size: .82rem; font-weight: 600; margin-bottom: 4px; color: var(--text); }
   input, select { padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: .95rem; outline: none; transition: .15s; width: 100%; }
   input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
@@ -76,7 +78,7 @@
   /* Toggle switch for income period */
   .toggle-group { display: inline-flex; border: 2px solid var(--border); border-radius: 8px; overflow: hidden; margin-top: 4px; }
   .toggle-group input[type="radio"] { display: none; }
-  .toggle-group label.toggle-opt { padding: 10px 24px; font-size: .9rem; font-weight: 600; cursor: pointer; color: var(--muted); background: var(--card); border: none; transition: .2s; user-select: none; }
+  .toggle-group label.toggle-opt { padding: 10px 24px; font-size: .9rem; font-weight: 600; cursor: pointer; color: var(--muted); background: var(--card); border: none; transition: .2s; user-select: none; text-align: center; }
   .toggle-group input[type="radio"]:checked + label.toggle-opt { background: var(--primary); color: #fff; }
 
   /* Navigation buttons */
@@ -350,11 +352,11 @@
         <summary>🏛️ Income Taxes <span class="acc-hint" id="taxAccHint"></span></summary>
         <div class="acc-body">
         <p class="exp-desc">Your combined federal + state income tax each month.</p>
-        <div style="margin-bottom:12px;">
-          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-right:18px;">
+        <div class="radio-row">
+          <label>
             <input type="radio" name="taxMode" value="known" checked onchange="toggleTaxMode()"> I know my monthly tax amount
           </label>
-          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+          <label>
             <input type="radio" name="taxMode" value="estimate" onchange="toggleTaxMode()"> Estimate it for me
           </label>
         </div>
@@ -428,12 +430,14 @@
             <!-- Deduction Method -->
             <div style="margin-top:16px;margin-bottom:12px;">
               <label style="font-size:.88rem;font-weight:700;display:block;margin-bottom:8px;">Deduction Method</label>
-              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-right:18px;">
-                <input type="radio" name="deductionMethod" value="standard" checked onchange="toggleDeductionMethod()"> Standard Deduction
-              </label>
-              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
-                <input type="radio" name="deductionMethod" value="itemized" onchange="toggleDeductionMethod()"> Itemized Deductions
-              </label>
+              <div class="radio-row">
+                <label>
+                  <input type="radio" name="deductionMethod" value="standard" checked onchange="toggleDeductionMethod()"> Standard Deduction
+                </label>
+                <label>
+                  <input type="radio" name="deductionMethod" value="itemized" onchange="toggleDeductionMethod()"> Itemized Deductions
+                </label>
+              </div>
             </div>
 
             <!-- Standard deduction panel -->
