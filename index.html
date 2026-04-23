@@ -266,6 +266,11 @@
           <input type="number" id="sqRate" placeholder="6.5" min="0" max="15" step="0.125" value="6.5">
           <small style="color:var(--muted)">30-yr fixed avg — <a href="https://www.freddiemac.com/pmms" target="_blank" style="color:var(--primary);">check current rates</a></small>
         </div>
+        <div class="form-group full">
+          <label>Total Liquid Savings Available ($) <em style="font-weight:400;color:var(--muted)">(optional)</em></label>
+          <input type="number" id="sqLiquidSavings" placeholder="e.g. 100000" min="0">
+          <small style="color:var(--muted)">Checking, savings, and accessible accounts — include your down payment funds. Used to show your closing cost gap.</small>
+        </div>
         <div class="form-group">
           <label>State</label>
           <select id="sqState" onchange="sqStateChange()">
@@ -626,6 +631,11 @@
           <label>Monthly HOA / Condo Fees ($)</label>
           <input type="number" id="hoa" placeholder="0" min="0">
         </div>
+        <div class="form-group full">
+          <label>Total Liquid Savings Available for This Purchase ($) <span class="info-tip" tabindex="0">ⓘ<span class="info-tip-text">All cash you could put toward this purchase — checking, savings, and money market accounts you can access without penalty. Include the funds you plan to use for your down payment. Don't count 401k/IRA (unless using first-time homebuyer exception) or investments you won't sell.</span></span></label>
+          <input type="number" id="liquidSavings" placeholder="e.g. 100000" min="0">
+          <span class="field-hint">Used to calculate your closing cost gap — how much you'll have left after down payment, closing costs, and recommended reserves.</span>
+        </div>
       </div>
     </div>
     <div class="nav-buttons">
@@ -691,6 +701,21 @@ $('sqDown').addEventListener('change', function() {
 // --- State & County property tax and insurance data ---
 // Insurance: rate as % of home value by state (Sources: III, NAIC 2024)
 // County tax: effective property tax rate by county (Sources: Census ACS B25103/B25077, Tax Foundation)
+// Buyer's estimated portion of state transfer / recordation tax, as a fraction of purchase price.
+// Rates are approximations — actual amounts vary by county and municipality.
+// States where sellers traditionally pay all transfer tax, or no tax exists, are 0.
+const STATE_TRANSFER_TAX = {
+  AL:0,     AK:0,      AZ:0,      AR:0.0033, CA:0.0011, CO:0,
+  CT:0.0075, DE:0.015,  DC:0.011,  FL:0.005,  GA:0.001,  HI:0.001,
+  ID:0,     IL:0,      IN:0,      IA:0,      KS:0,      KY:0,
+  LA:0,     ME:0.0022, MD:0.005,  MA:0.00456,MI:0,      MN:0.0033,
+  MS:0,     MO:0,      MT:0,      NE:0,      NV:0,      NH:0.0075,
+  NJ:0,     NM:0,      NY:0.004,  NC:0.002,  ND:0,      OH:0,
+  OK:0,     OR:0,      PA:0.01,   RI:0.0046, SC:0,      SD:0,
+  TN:0,     TX:0,      UT:0,      VT:0.0125, VA:0.0025, WA:0.011,
+  WV:0.003, WI:0,      WY:0
+};
+
 const STATE_INS_RATE = {
   AL:0.0058,AK:0.0040,AZ:0.0037,AR:0.0065,CA:0.0030,CO:0.0045,CT:0.0038,DE:0.0028,
   FL:0.0110,GA:0.0044,HI:0.0025,ID:0.0033,IL:0.0037,IN:0.0035,IA:0.0038,KS:0.0065,
@@ -1117,6 +1142,145 @@ function getMonthlyTax() {
   return (fedTax + stateTax + ssTax + medTax) / 12;
 }
 
+// --- Cash Needed to Close builder (shared by both modes) ---
+function buildClosingCostsHTML({ price, loan, rate, annualTax, annualIns, mortPmt, down, state, liquidSavings }) {
+  const hasLiquid = liquidSavings > 0;
+
+  // Lender fees
+  const origFee    = Math.round(loan * 0.01);
+  const appraisal  = 500;
+  const creditRpt  = 40;
+
+  // Title & settlement
+  const lenderTitle = Math.round(loan * 0.0035);
+  const ownerTitle  = Math.round(price * 0.0025);
+  const settlement  = 750;
+  const recording   = 150;
+
+  // State transfer / recordation tax (buyer portion)
+  const txRate      = (STATE_TRANSFER_TAX[state] || 0);
+  const transferTax = Math.round(price * txRate);
+
+  const closingCosts = origFee + appraisal + creditRpt + lenderTitle + ownerTitle + settlement + recording + transferTax;
+
+  // Prepaids & escrow setup
+  const prepaidInterest  = Math.round((loan * rate / 365) * 15);
+  const insuranceUpfront = Math.round(annualIns);
+  const taxEscrow        = Math.round((annualTax / 12) * 3);
+  const insEscrow        = Math.round((annualIns / 12) * 2);
+  const totalPrepaids    = prepaidInterest + insuranceUpfront + taxEscrow + insEscrow;
+
+  // Post-closing reserves (not spent at closing, but lender verifies liquid)
+  const monthlyPITI = mortPmt + annualTax / 12 + annualIns / 12;
+  const reserves    = Math.round(monthlyPITI * 3);
+
+  // Grand totals
+  const totalNeeded = down + closingCosts + totalPrepaids + reserves;
+  const totalMinimum = down + closingCosts + totalPrepaids; // without reserves
+
+  // Gap analysis
+  const gap    = hasLiquid ? liquidSavings - totalNeeded   : 0;
+  const minGap = hasLiquid ? liquidSavings - totalMinimum  : 0;
+
+  let statusBg, statusColor, statusIcon, statusHeadline, statusDetail;
+  if (!hasLiquid) {
+    statusBg = '#f1f5f9'; statusColor = 'var(--muted)'; statusIcon = 'ⓘ';
+    statusHeadline = 'Enter your available savings to see gap analysis';
+    statusDetail = '';
+  } else if (gap >= 0) {
+    statusBg = '#f0fdf4'; statusColor = 'var(--success)'; statusIcon = '✅';
+    statusHeadline = 'You have enough to close (including 3-month reserves)';
+    statusDetail = `You'd have <strong style="color:var(--success)">${fmt(Math.round(gap))}</strong> left over after down payment, closing costs, and reserves.`;
+  } else if (minGap >= 0) {
+    statusBg = '#fffbeb'; statusColor = 'var(--warning)'; statusIcon = '⚠️';
+    statusHeadline = 'Enough to close, but reserves are short';
+    statusDetail = `You can cover the down payment and closing costs, but you'd need <strong style="color:var(--warning)">${fmt(Math.round(-gap))}</strong> more to have a 3-month reserve. You may still be able to close — but you'd be thin on emergency funds.`;
+  } else {
+    statusBg = '#fef2f2'; statusColor = 'var(--danger)'; statusIcon = '🚫';
+    statusHeadline = `You're short by ${fmt(Math.round(-minGap))} to cover closing`;
+    statusDetail = `You'd need <strong style="color:var(--danger)">${fmt(Math.round(-minGap))}</strong> more just to reach the minimum (no reserves). With a recommended 3-month reserve, the gap is <strong>${fmt(Math.round(-gap))}</strong>.`;
+  }
+
+  const ccPctOfPrice = price > 0 ? ((closingCosts + totalPrepaids) / price * 100).toFixed(1) : '0';
+  const tip = (text, body) => `<span class="info-tip" tabindex="0">ⓘ<span class="info-tip-text">${body}</span></span>`;
+
+  return `
+  <details class="accordion"${hasLiquid ? ' open' : ''}>
+  <summary>💵 Cash Needed to Close <span class="acc-hint">${fmt(Math.round(totalNeeded))} total needed</span></summary>
+  <div class="acc-body">
+
+  <div style="background:${statusBg};border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px;">
+    <div style="font-size:1.4rem;line-height:1.2;">${statusIcon}</div>
+    <div>
+      <div style="font-weight:700;color:${statusColor};font-size:.95rem;">${statusHeadline}</div>
+      ${statusDetail ? `<div style="font-size:.83rem;color:var(--text);margin-top:3px;">${statusDetail}</div>` : ''}
+    </div>
+  </div>
+
+  <table class="breakdown">
+    <tr><th>Item</th><th class="num">Estimated Amount</th></tr>
+
+    <tr><td colspan="2" style="font-weight:700;font-size:.75rem;color:var(--muted);padding:10px 12px 4px;letter-spacing:.5px;">DOWN PAYMENT</td></tr>
+    <tr><td>Down Payment (${price > 0 ? ((down / price) * 100).toFixed(1) : 0}%)</td><td class="num" style="font-weight:700;">${fmt(down)}</td></tr>
+
+    <tr><td colspan="2" style="font-weight:700;font-size:.75rem;color:var(--muted);padding:10px 12px 4px;letter-spacing:.5px;">CLOSING COSTS <span style="font-weight:400;">(est. ${ccPctOfPrice}% of purchase price)</span></td></tr>
+    <tr>
+      <td>Origination &amp; Underwriting ${tip('o','Lender fee to process and fund the loan. Typically 0.5–1% of the loan amount — shop lenders, as this is negotiable.')}</td>
+      <td class="num">${fmt(origFee)}</td>
+    </tr>
+    <tr><td>Appraisal</td><td class="num">${fmt(appraisal)}</td></tr>
+    <tr>
+      <td>Lender's Title Insurance</td>
+      <td class="num">${fmt(lenderTitle)}</td>
+    </tr>
+    <tr>
+      <td>Owner's Title Insurance ${tip('o','Protects you (not just the lender) against title defects or ownership disputes. Strongly recommended. In some states the seller pays this.')}</td>
+      <td class="num">${fmt(ownerTitle)}</td>
+    </tr>
+    <tr><td>Settlement / Closing Fee</td><td class="num">${fmt(settlement)}</td></tr>
+    <tr><td>Recording Fees</td><td class="num">${fmt(recording)}</td></tr>
+    <tr><td>Credit Report</td><td class="num">${fmt(creditRpt)}</td></tr>
+    <tr>
+      <td>State Transfer / Recordation Tax ${tip('o','Buyer\'s estimated share of state and local transfer taxes. Rates vary significantly by county — confirm with your title company.')}${!state ? ' <em style="color:var(--muted);font-size:.78rem;">(select state for estimate)</em>' : ''}</td>
+      <td class="num">${transferTax > 0 ? fmt(transferTax) : '<span style="color:var(--muted);">—</span>'}</td>
+    </tr>
+    <tr style="font-weight:700;border-top:1.5px solid var(--border);"><td>Subtotal — Closing Costs</td><td class="num">${fmt(closingCosts)}</td></tr>
+
+    <tr><td colspan="2" style="font-weight:700;font-size:.75rem;color:var(--muted);padding:10px 12px 4px;letter-spacing:.5px;">PREPAIDS &amp; ESCROW SETUP</td></tr>
+    <tr>
+      <td>First-Year Homeowner Insurance ${tip('o','Usually paid in full at or before closing. Your lender will require proof of an active policy.')}</td>
+      <td class="num">${fmt(insuranceUpfront)}</td>
+    </tr>
+    <tr>
+      <td>Prepaid Interest (15 days) ${tip('o','Interest from your closing date to the end of the month. Your first full mortgage payment won\'t be due for roughly 6 weeks after closing.')}</td>
+      <td class="num">${fmt(prepaidInterest)}</td>
+    </tr>
+    <tr><td>Property Tax Escrow (3 months)</td><td class="num">${fmt(taxEscrow)}</td></tr>
+    <tr><td>Insurance Escrow (2 months)</td><td class="num">${fmt(insEscrow)}</td></tr>
+    <tr style="font-weight:700;border-top:1.5px solid var(--border);"><td>Subtotal — Prepaids &amp; Escrow</td><td class="num">${fmt(totalPrepaids)}</td></tr>
+
+    <tr><td colspan="2" style="font-weight:700;font-size:.75rem;color:var(--muted);padding:10px 12px 4px;letter-spacing:.5px;">POST-CLOSING RESERVES</td></tr>
+    <tr>
+      <td>3-Month PITI Reserve ${tip('o','Lenders verify you have 2–6 months of housing payments in liquid savings after closing. This money stays in your account — it\'s not spent at closing — but must be accessible. Based on ' + fmt(Math.round(monthlyPITI)) + '/mo PITI × 3 months.')}</td>
+      <td class="num">${fmt(reserves)}</td>
+    </tr>
+
+    <tr style="font-weight:800;font-size:1rem;border-top:2px solid var(--text);"><td>Total Cash Needed</td><td class="num" style="color:var(--primary);">${fmt(totalNeeded)}</td></tr>
+    ${hasLiquid ? `
+    <tr><td>Your Available Savings</td><td class="num">${fmt(Math.round(liquidSavings))}</td></tr>
+    <tr style="font-weight:700;color:${gap >= 0 ? 'var(--success)' : 'var(--danger)'};">
+      <td>${gap >= 0 ? 'Surplus After Closing &amp; Reserves' : 'Savings Gap'}</td>
+      <td class="num">${gap >= 0 ? '+' : '−'}${fmt(Math.abs(Math.round(gap)))}</td>
+    </tr>` : `
+    <tr><td colspan="2" style="color:var(--muted);font-size:.82rem;font-style:italic;padding:10px 12px;">Enter your liquid savings in the${document.getElementById('liquidSavings') ? ' Home Details step' : ' field above'} to see your gap analysis.</td></tr>`}
+  </table>
+
+  <div style="margin-top:14px;font-size:.78rem;color:var(--muted);line-height:1.65;background:var(--bg);border-radius:8px;padding:12px 14px;">
+    <strong>About these estimates:</strong> Closing costs assume 1% origination fee, standard title rates, and 15 days of prepaid interest. Actual figures vary by lender, location, and negotiation. Ask your lender for a <strong>Loan Estimate</strong> — they're legally required to provide one within 3 business days of application. The 3-month reserve is not spent at closing but must remain liquid in your account post-close.
+  </div>
+  </div></details>`;
+}
+
 // --- calculation ---
 function calculate() {
   // Income
@@ -1286,6 +1450,8 @@ function calculate() {
       <tr><td>Total Cost of Home</td><td class="num">${fmt(price + totalInterest)}</td></tr>
     </table>
     </div></details>
+
+    ${buildClosingCostsHTML({ price, loan, rate, annualTax: num('propTax'), annualIns: num('homeIns'), mortPmt, down, state: $('homeState').value, liquidSavings: num('liquidSavings') })}
 
     ${(() => {
       // --- What Can I Afford? ---
@@ -2140,6 +2306,8 @@ function simpleCalculate() {
     </table>
     </div></details>
 
+    ${buildClosingCostsHTML({ price, loan, rate, annualTax: tax * 12, annualIns: ins * 12, mortPmt, down, state: $('sqState')?.value || '', liquidSavings: num('sqLiquidSavings') })}
+
     ${(() => {
       const fixedDown = down;
 
@@ -2306,6 +2474,8 @@ function saveAll() {
     propTax: $('propTax').value,
     homeIns: $('homeIns').value,
     hoa: $('hoa').value,
+    liquidSavings: $('liquidSavings').value,
+    sqLiquidSavings: $('sqLiquidSavings').value,
     homeState: $('homeState').value,
     homeCounty: $('homeCounty').value,
     expenses: [],
@@ -2330,7 +2500,7 @@ function restoreSaved() {
     // Mode
     if (data.mode) switchMode(data.mode);
     // Simple fields
-    ['sqIncome','sqDebt','sqPrice','sqDownCustom','sqRate'].forEach(id => {
+    ['sqIncome','sqDebt','sqPrice','sqDownCustom','sqRate','sqLiquidSavings'].forEach(id => {
       if (data[id]) $(id).value = data[id];
     });
     if (data.sqDown) { $('sqDown').value = data.sqDown; $('sqDownCustomWrap').style.display = data.sqDown === 'custom' ? '' : 'none'; }
@@ -2377,7 +2547,7 @@ function restoreSaved() {
     const periodEl = document.querySelector(`input[name="incPeriod"][value="${data.incPeriod}"]`);
     if (periodEl) periodEl.checked = true;
     // Simple fields
-    ['incSalary','incSpouse','incSide','incOther','homePrice','downPayment','mortRate','propTax','homeIns','hoa'].forEach(id => {
+    ['incSalary','incSpouse','incSide','incOther','homePrice','downPayment','mortRate','propTax','homeIns','hoa','liquidSavings'].forEach(id => {
       if (data[id]) $(id).value = data[id];
     });
     if (data.homeState) { $('homeState').value = data.homeState; onStateChange(); }
