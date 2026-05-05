@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monthly Challenge — Log Your Completion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #0d0d0d;
+      --surface:      #1a1a1a;
+      --surface-2:    #242424;
+      --accent:       #c8972a;
+      --accent-dark:  #a37820;
+      --accent-light: rgba(200,151,42,0.12);
+      --text:         #f0ece4;
+      --muted:        #7a7470;
+      --border:       #2e2a26;
+      --danger:       #c0392b;
+      --danger-bg:    rgba(192,57,43,0.12);
+      --success-bg:   #0f2310;
+      --success-text: #81c784;
+      --radius:       6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 1rem;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── PAGE WRAP ── */
+    .page-wrap {
+      max-width: 580px;
+      margin: 0 auto;
+      padding: 0 16px 80px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background:
+        repeating-linear-gradient(
+          45deg,
+          #111 0px,
+          #111 3px,
+          #0d0d0d 3px,
+          #0d0d0d 9px
+        );
+      border-bottom: 1px solid var(--border);
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+
+    .shield {
+      width: 56px;
+      height: 64px;
+      clip-path: polygon(50% 0%, 100% 22%, 100% 72%, 50% 100%, 0% 72%, 0% 22%);
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: #0d0d0d;
+      letter-spacing: 0.04em;
+    }
+
+    .program-label {
+      display: block;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 0.25em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .hero-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: clamp(2.4rem, 9vw, 4.8rem);
+      line-height: 0.95;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .month-badge {
+      display: inline-block;
+      background: var(--accent-light);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 2px;
+    }
+
+    /* ── MISSION BAR ── */
+    .mission-bar {
+      background: var(--accent);
+      padding: 13px 24px;
+      text-align: center;
+    }
+
+    .mission-bar p {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: clamp(1rem, 4vw, 1.35rem);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #0d0d0d;
+    }
+
+    /* ── FORM SECTION ── */
+    .form-section {
+      padding: 32px 0 0;
+    }
+
+    .form-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-top: 4px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 28px 24px 32px;
+    }
+
+    .form-header {
+      margin-bottom: 28px;
+    }
+
+    .form-header h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 1.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .form-header p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* ── FIELD GROUPS ── */
+    .field-group {
+      margin-bottom: 20px;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    .field-group label .req {
+      color: var(--accent);
+      margin-left: 2px;
+    }
+
+    .field-group input,
+    .field-group textarea {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      padding: 12px 14px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+      appearance: none;
+    }
+
+    .field-group input::placeholder,
+    .field-group textarea::placeholder {
+      color: var(--muted);
+      opacity: 0.7;
+    }
+
+    .field-group input:focus,
+    .field-group textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(200,151,42,0.18);
+    }
+
+    .field-group textarea {
+      resize: vertical;
+      min-height: 110px;
+    }
+
+    /* Error states */
+    .field-group.field-error input,
+    .field-group.field-error textarea {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(192,57,43,0.15);
+    }
+
+    .error-msg {
+      display: none;
+      color: var(--danger);
+      font-size: 0.78rem;
+      margin-top: 5px;
+    }
+
+    .field-group.field-error .error-msg {
+      display: block;
+    }
+
+    /* ── DIVIDER ── */
+    .field-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+
+    /* ── FILE UPLOAD ── */
+    .file-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface-2);
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      min-height: 52px;
+    }
+
+    .file-label:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .file-label svg {
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+
+    .file-label.has-file {
+      border-color: var(--accent);
+      border-style: solid;
+      color: var(--text);
+    }
+
+    .file-label.has-file svg {
+      opacity: 1;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+    }
+
+    .upload-note {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .upload-note a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .upload-note a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── ERROR ALERT ── */
+    #formError {
+      background: var(--danger-bg);
+      border-left: 3px solid var(--danger);
+      border-radius: var(--radius);
+      color: #e57373;
+      font-size: 0.88rem;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+
+    /* ── SUBMIT BUTTON ── */
+    .btn-submit {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #0d0d0d;
+      cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 16px 20px;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      background: var(--accent-dark);
+    }
+
+    .btn-submit:active:not(:disabled) {
+      opacity: 0.88;
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* ── SUCCESS STATE ── */
+    #formSuccess {
+      padding: 32px 0 0;
+    }
+
+    .success-card {
+      background: var(--success-bg);
+      border: 2px solid #2e5c31;
+      border-top: 4px solid var(--success-text);
+      border-radius: var(--radius);
+      padding: 40px 28px;
+      text-align: center;
+    }
+
+    .success-check {
+      font-size: 3rem;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 16px;
+      line-height: 1;
+    }
+
+    .success-card h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 2.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .success-challenge-name {
+      display: inline-block;
+      background: var(--accent-light);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 2px;
+      margin-bottom: 20px;
+    }
+
+    .success-card p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .footer p {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (min-width: 600px) {
+      .hero { padding: 56px 40px 48px; }
+      .form-card { padding: 36px 40px 40px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="shield">MC</div>
+      <span class="program-label">Monthly Challenge</span>
+      <h1 class="hero-title">Log Your<br>Completion</h1>
+      <span class="month-badge">[MONTH YEAR]</span>
+    </div>
+
+    <!-- MISSION BAR -->
+    <div class="mission-bar">
+      <p>You got the letter. Now prove it.</p>
+    </div>
+
+    <!-- FORM SECTION -->
+    <div class="form-section" id="formSection">
+      <div class="form-card">
+        <div class="form-header">
+          <h2>Report Your Challenge</h2>
+          <p>Tell us what you did. Every man's challenge is his own.</p>
+        </div>
+
+        <form id="challengeForm" novalidate>
+          <!-- Spam trap — do not remove -->
+          <input type="text" name="_gotcha" class="sr-only" tabindex="-1" autocomplete="off">
+
+          <!-- Name -->
+          <div class="field-group" id="group-name">
+            <label for="inputName">Full Name <span class="req">*</span></label>
+            <input
+              type="text"
+              id="inputName"
+              name="name"
+              placeholder="Your full name"
+              autocomplete="name"
+            >
+            <span class="error-msg">Name is required.</span>
+          </div>
+
+          <!-- Email -->
+          <div class="field-group" id="group-email">
+            <label for="inputEmail">Email <span class="req">*</span></label>
+            <input
+              type="email"
+              id="inputEmail"
+              name="email"
+              placeholder="your@email.com"
+              autocomplete="email"
+            >
+            <span class="error-msg">A valid email address is required.</span>
+          </div>
+
+          <!-- Location -->
+          <div class="field-group" id="group-location">
+            <label for="inputLocation">City / Location</label>
+            <input
+              type="text"
+              id="inputLocation"
+              name="location"
+              placeholder="City, State"
+              autocomplete="address-level2"
+            >
+          </div>
+
+          <hr class="field-divider">
+
+          <!-- Challenge Description -->
+          <div class="field-group" id="group-challenge_description">
+            <label for="inputDescription">Describe Your Challenge <span class="req">*</span></label>
+            <textarea
+              id="inputDescription"
+              name="challenge_description"
+              placeholder="What was your challenge this month, and how did you complete it? Be specific — this is your record."
+              rows="5"
+            ></textarea>
+            <span class="error-msg">Tell us about your challenge.</span>
+          </div>
+
+          <hr class="field-divider">
+
+          <!-- Photo Upload -->
+          <div class="field-group">
+            <label>Photo Proof <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+            <label for="inputPhoto" class="file-label" id="fileLabel">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span id="fileLabelText">Tap to attach a photo</span>
+            </label>
+            <input
+              type="file"
+              id="inputPhoto"
+              name="photo"
+              accept="image/*"
+              class="sr-only"
+            >
+            <p class="upload-note">
+              Photo uploads require a paid Formspree plan. On the free plan, your description above is your proof.
+              You can also email your photo to <a href="mailto:[OWNER_EMAIL]">[OWNER_EMAIL]</a>.
+            </p>
+          </div>
+
+          <!-- Error alert -->
+          <div id="formError" hidden role="alert"></div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn-submit" id="btnSubmit">
+            Log My Completion
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- SUCCESS STATE -->
+    <div id="formSuccess" hidden>
+      <div class="success-card">
+        <span class="success-check">✓</span>
+        <h2>Challenge Logged.</h2>
+        <div class="success-challenge-name" id="successChallengeName"></div>
+        <p>We'll be in touch. Keep showing up.</p>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <p>Monthly Challenge &nbsp;·&nbsp; <span id="footerYear"></span></p>
+    </div>
+
+  </div><!-- /.page-wrap -->
+
+  <script>
+    /* ─────────────────────────────────────────────
+       USER CONFIG — edit these each month
+    ───────────────────────────────────────────── */
+    const FORMSPREE_ID         = 'YOUR_FORMSPREE_ID';   // from formspree.io dashboard
+    const CHALLENGE_NAME       = 'CHALLENGE_NAME_HERE'; // e.g. "February Cold Plunge"
+    const SUPPORTS_FILE_UPLOAD = false;                 // set true on paid Formspree plan
+
+    /* ─────────────────────────────────────────────
+       CONSTANTS
+    ───────────────────────────────────────────── */
+    const FORMSPREE_URL = `https://formspree.io/f/${FORMSPREE_ID}`;
+
+    const form        = document.getElementById('challengeForm');
+    const btnSubmit   = document.getElementById('btnSubmit');
+    const formSection = document.getElementById('formSection');
+    const successBox  = document.getElementById('formSuccess');
+    const errorBox    = document.getElementById('formError');
+
+    /* ─────────────────────────────────────────────
+       INIT
+    ───────────────────────────────────────────── */
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+    document.getElementById('successChallengeName').textContent = CHALLENGE_NAME;
+
+    /* ─────────────────────────────────────────────
+       FILE INPUT — update label text on selection
+    ───────────────────────────────────────────── */
+    document.getElementById('inputPhoto').addEventListener('change', function () {
+      const label     = document.getElementById('fileLabel');
+      const labelText = document.getElementById('fileLabelText');
+      if (this.files && this.files[0]) {
+        labelText.textContent = this.files[0].name;
+        label.classList.add('has-file');
+      } else {
+        labelText.textContent = 'Tap to attach a photo';
+        label.classList.remove('has-file');
+      }
+    });
+
+    /* ─────────────────────────────────────────────
+       VALIDATION
+    ───────────────────────────────────────────── */
+    function validateForm() {
+      let valid = true;
+      let firstInvalid = null;
+
+      function check(groupId, condition) {
+        const group = document.getElementById(groupId);
+        if (!condition) {
+          group.classList.add('field-error');
+          if (!firstInvalid) firstInvalid = group.querySelector('input, textarea');
+          valid = false;
+        } else {
+          group.classList.remove('field-error');
+        }
+      }
+
+      const name  = document.getElementById('inputName').value.trim();
+      const email = document.getElementById('inputEmail').value.trim();
+      const desc  = document.getElementById('inputDescription').value.trim();
+
+      check('group-name',                name.length > 0);
+      check('group-email',               /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+      check('group-challenge_description', desc.length > 0);
+
+      if (firstInvalid) firstInvalid.focus();
+      return valid;
+    }
+
+    function clearFieldError(el) {
+      const group = el.closest('.field-group');
+      if (group) group.classList.remove('field-error');
+    }
+
+    /* ─────────────────────────────────────────────
+       LOADING STATE
+    ───────────────────────────────────────────── */
+    const SUBMIT_LABEL = 'Log My Completion';
+    const SPINNER_HTML = `
+      <svg class="spinner" width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M12 2a10 10 0 0 1 10 10" />
+      </svg>
+      Submitting…`;
+
+    function setLoading(on) {
+      btnSubmit.disabled  = on;
+      btnSubmit.innerHTML = on ? SPINNER_HTML : SUBMIT_LABEL;
+    }
+
+    /* ─────────────────────────────────────────────
+       ERROR DISPLAY
+    ───────────────────────────────────────────── */
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.hidden      = false;
+      errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /* ─────────────────────────────────────────────
+       BUILD REQUEST BODY
+    ───────────────────────────────────────────── */
+    function buildBody() {
+      if (SUPPORTS_FILE_UPLOAD) {
+        const fd = new FormData(form);
+        fd.set('_subject', `Challenge Completion — ${CHALLENGE_NAME}`);
+        return fd;
+      }
+
+      return JSON.stringify({
+        name:                  document.getElementById('inputName').value.trim(),
+        email:                 document.getElementById('inputEmail').value.trim(),
+        location:              document.getElementById('inputLocation').value.trim(),
+        challenge_description: document.getElementById('inputDescription').value.trim(),
+        _subject:              `Challenge Completion — ${CHALLENGE_NAME}`,
+      });
+    }
+
+    /* ─────────────────────────────────────────────
+       SUBMISSION
+    ───────────────────────────────────────────── */
+    async function handleSubmit(e) {
+      e.preventDefault();
+      if (!validateForm()) return;
+
+      setLoading(true);
+      errorBox.hidden = true;
+
+      const headers = SUPPORTS_FILE_UPLOAD
+        ? { 'Accept': 'application/json' }
+        : { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+
+      try {
+        const res = await fetch(FORMSPREE_URL, {
+          method:  'POST',
+          headers: headers,
+          body:    buildBody(),
+        });
+
+        if (res.ok) {
+          formSection.hidden = true;
+          successBox.hidden  = false;
+          successBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          const data = await res.json().catch(() => ({}));
+          showError(data.error || 'Submission failed. Please try again.');
+        }
+      } catch (_) {
+        showError('Network error. Check your connection and try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    /* ─────────────────────────────────────────────
+       WIRE UP
+    ───────────────────────────────────────────── */
+    form.addEventListener('submit', handleSubmit);
+
+    document.querySelectorAll('#challengeForm input, #challengeForm textarea')
+      .forEach(el => el.addEventListener('input', () => clearFieldError(el)));
+  </script>
+</body>
+</html>
